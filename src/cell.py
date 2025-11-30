@@ -1,6 +1,4 @@
-import piece
-
-class Cell:
+class Cell():
     def __init__(self, q, r, s):
         if (q + r + s) != 0:
             raise ValueError("Invalid cell: q+r+s!=0")
@@ -16,7 +14,7 @@ class Cell:
         return hash((self.q, self.r, self.s))
 
     def print_cell(self):
-        print("({}, {}, {}), pieces: ".format(self.q, self.r, self.s, self.pieces))
+        print(f"({self.q}, {self.r}, {self.s}), pieces: {self.pieces}")
 
     def coordinates(self):
         return self.q, self.r, self.s

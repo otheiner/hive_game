@@ -13,7 +13,6 @@ class Board:
         self.halfwidth = halfwidth
         self.board_size = 2 * self.halfwidth + 1
         self.board = np.zeros((self.board_size, self.board_size, self.board_size))
-        self.ax = None
         self.cells = {}  # key = (q,r,s), value = Cell
 
         for i in range(self.board_size):
