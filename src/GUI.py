@@ -1,4 +1,4 @@
-from matplotlib.patches import Polygon
+import matplotlib.patches as patches
 import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
 import math
@@ -11,7 +11,7 @@ importlib.reload(cell_lib)
 importlib.reload(piece_lib)
 importlib.reload(board_lib)
 from piece import Piece, Ant
-from cell import Cell
+from cell import Cell, GridCoordinates
 from board import Board
 
 class GUI:
@@ -55,16 +55,21 @@ class GUI:
         y = 3 / 2 * self.cell_size * self.cube_to_axial(q, r, s)[1]
         return x, y
 
-    def draw_cell(self, cell, show=False, border_color='black',
-                  fill_color='white', fill_alpha=1):
+    def draw_cell(self, coord, show=False, border_color='black',
+                  fill_color='white', fill_alpha=1, piece_type_color = None):
         ax = self._ensure_ax()
-        cx = self.cube_to_cartesian(cell.q, cell.r, cell.s)[0]
-        cy = self.cube_to_cartesian(cell.q, cell.r, cell.s)[1]
+        cx = self.cube_to_cartesian(coord.q, coord.r, coord.s)[0]
+        cy = self.cube_to_cartesian(coord.q, coord.r, coord.s)[1]
         centre = self.canvas_size / 2
         rgba_fill = mcolors.to_rgba(fill_color, fill_alpha)
-        hexagon = Polygon(self.cell_corners(centre + cx, centre + cy),
+        hexagon = patches.Polygon(self.cell_corners(centre + cx, centre + cy),
                           closed=True, edgecolor=border_color, facecolor=rgba_fill)
         ax.add_patch(hexagon)
+        if piece_type_color is not None:
+            rgba_fill = mcolors.to_rgba(piece_type_color, fill_alpha)
+            circle = patches.Circle((centre + cx, centre + cy), radius=self.cell_size/3,
+                                    facecolor=rgba_fill)
+            ax.add_patch(circle)
         if show:
             plt.show()
             return 0
@@ -73,7 +78,7 @@ class GUI:
 
     def draw_cells(self, cells, show=False, border_color='black', fill_color='white', fill_alpha=1):
         for cell in cells:
-            self.draw_cell(cell, show=show, border_color=border_color,
+            self.draw_cell(cell.coord, show=show, border_color=border_color,
                            fill_color=fill_color, fill_alpha=fill_alpha)
         return
 
@@ -81,18 +86,26 @@ class GUI:
         for cell in self.game.cells.values():
             top_piece = cell.get_top_piece()
             if top_piece is None:
-                self.draw_cell(cell, fill_color='white', fill_alpha=0)
+                self.draw_cell(cell.coord, fill_color='white', fill_alpha=0)
             else:
+                stone_color = top_piece.color
+                if stone_color == Piece.PieceColour.BLACK:
+                    fill_color = 'black'
+                elif stone_color == Piece.PieceColour.WHITE:
+                    fill_color = (1.0, 0.99, 0.82) #cream colour
+                else:
+                    raise ValueError('Piece has invalid colour')
+
                 if top_piece.type == Piece.PieceType.ANT:
-                    self.draw_cell(cell, fill_color='blue')
+                    self.draw_cell(cell.coord, fill_color=fill_color, piece_type_color='blue')
                 if top_piece.type == Piece.PieceType.QUEEN:
-                    self.draw_cell(cell, fill_color='yellow')
+                    self.draw_cell(cell.coord, fill_color=fill_color, piece_type_color='yellow')
                 if top_piece.type == Piece.PieceType.SPIDER:
-                    self.draw_cell(cell, fill_color='brown')
+                    self.draw_cell(cell.coord, fill_color=fill_color, piece_type_color='brown')
                 if top_piece.type == Piece.PieceType.GRASSHOPPER:
-                    self.draw_cell(cell, fill_color='green')
+                    self.draw_cell(cell.coord, fill_color=fill_color, piece_type_color='green')
                 if top_piece.type == Piece.PieceType.BEETLE:
-                    self.draw_cell(cell, fill_color='purple')
+                    self.draw_cell(cell.coord, fill_color=fill_color, piece_type_color='purple')
 
     def draw_outer_border(self):
         outer_border = self.game.get_outer_border()

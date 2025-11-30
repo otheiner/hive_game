@@ -1,5 +1,5 @@
 import numpy as np
-from cell import Cell
+from cell import Cell, CubeCoordinates
 from piece import Piece
 
 # # cell = 0 - out of board
@@ -19,22 +19,23 @@ class Board:
             for j in range(self.board_size):
                 for k in range(self.board_size):
                     try:
-                        q, r, s = self.array_to_board(i, j, k)
-                        self.cells[(q, r, s)] = Cell(q, r, s)
+                        coord = self.array_to_coord(i, j, k)
+                        self.cells[(coord.q, coord.r, coord.s)] = Cell(coord)
                     except:
                         pass
+        #print(self.cells)
 
-    def board_to_array(self, cell):
-        if (abs(cell.q)*2+1 > self.board_size or
-            abs(cell.r)*2+1 > self.board_size or
-            abs(cell.s)*2+1 > self.board_size):
+    def coord_to_array(self, coord):
+        if (abs(coord.q)*2+1 > self.board_size or
+            abs(coord.r)*2+1 > self.board_size or
+            abs(coord.s)*2+1 > self.board_size):
             raise ValueError('Coordinates out of active board!')
-        i = self.halfwidth + cell.q
-        j = self.halfwidth + cell.r
-        k = self.halfwidth + cell.s
+        i = self.halfwidth + coord.q
+        j = self.halfwidth + coord.r
+        k = self.halfwidth + coord.s
         return i, j, k
 
-    def array_to_board(self, i, j ,k):
+    def array_to_coord(self, i, j ,k):
         if i < 0 or j <0 or k < 0:
             raise ValueError('Array indices has to be positive!')
         if i + 1 >  self.board_size or j + 1 > self.board_size or k + 1 > self.board_size:
@@ -42,12 +43,11 @@ class Board:
         q = i - self.halfwidth
         r = j - self.halfwidth
         s = k - self.halfwidth
-        if q + r + s != 0:
-            raise ValueError('Invalid cell: q+r+s!=0')
-        return q, r, s
+        coord = CubeCoordinates(q, r, s)
+        return coord
 
-    def get_cell(self, q, r, s):
+    def get_cell(self, coord):
         try:
-            return self.cells[(q, r, s)]
+            return self.cells[(coord.q, coord.r, coord.s)]
         except KeyError:
-            raise ValueError('Cell is not on the board: q={}, r={}, s={}'.format(q, r, s))
+            raise ValueError(f"Cell is not on the board: q={coord.q}, r={coord.r}, s={coord.s}")
