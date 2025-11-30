@@ -1,5 +1,6 @@
 import numpy as np
 from cell import Cell
+from piece import Piece
 
 # # cell = 0 - out of board
 # # cell = 1 - board
@@ -13,13 +14,14 @@ class Board:
         self.board_size = 2 * self.halfwidth + 1
         self.board = np.zeros((self.board_size, self.board_size, self.board_size))
         self.ax = None
+        self.cells = {}  # key = (q,r,s), value = Cell
 
         for i in range(self.board_size):
             for j in range(self.board_size):
                 for k in range(self.board_size):
                     try:
-                        self.array_to_board(i, j, k)
-                        self.board[i, j, k] = 1
+                        q, r, s = self.array_to_board(i, j, k)
+                        self.cells[(q, r, s)] = Cell(q, r, s)
                     except:
                         pass
 
@@ -43,34 +45,10 @@ class Board:
         s = k - self.halfwidth
         if q + r + s != 0:
             raise ValueError('Invalid cell: q+r+s!=0')
-        cell = Cell(q, r, s)
-        return cell
+        return q, r, s
 
-    def get_cell_value(self, cell):
-        i, j, k = self.board_to_array(cell)
-        return self.board[i, j, k]
-
-    #TODO Check if I can place piece (if it is not occupied - maybe duplicit with move)
-    def place_piece(self,cell, piece_value):
-        i, j, k = self.board_to_array(cell)
-        self.board[i, j, k] += piece_value
-        return
-
-    def remove_piece(self,cell, piece_value = 2):
-        i, j, k = self.board_to_array(cell)
-        self.board[i, j, k] -= piece_value
-        return
-
-    #TODO Make sure that this works with pieces that can move on top of others
-    def move_piece(self, current_cell, new_cell, piece_value):
-        if self.get_cell_value(current_cell) != piece_value + 1:
-            print("Invalid move: Cell doesn't contain piece.")
-            return False
-        if self.get_cell_value(new_cell) != 1:
-            print("Invalid move: Target cell is not empty.")
-            return False
-        i1, j1, k1 = self.board_to_array(current_cell)
-        self.board[i1, j1, k1] -= piece_value
-        i2, j2, k2 = self.board_to_array(new_cell)
-        self.board[i2, j2, k2] += piece_value
-        return True
+    def get_cell(self, q, r, s):
+        try:
+            return self.cells[(q, r, s)]
+        except KeyError:
+            raise ValueError('Cell is not on the board: q={}, r={}, s={}'.format(q, r, s))

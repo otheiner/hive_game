@@ -2,10 +2,14 @@
 # import game_engine
 # importlib.reload(game_engine)
 
-ANT = 1
-QUEEN = 2
-
 class Piece:
+    class PieceType():
+        QUEEN = 1
+        ANT = 2
+        SPIDER = 3
+        GRASSHOPPER = 4
+        BEETLE = 5
+
     def __init__(self, piece_type):
         self.type = piece_type
 
@@ -14,7 +18,7 @@ class Piece:
 
 class Ant(Piece):
     def __init__(self):
-        super().__init__(ANT)
+        super().__init__(self.PieceType.ANT)
 
     def get_allowed_moves(self, current_cell, game_state):
         if not game_state.move_preserves_continuity(current_cell):
