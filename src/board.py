@@ -50,6 +50,7 @@ class Board:
         i, j, k = self.board_to_array(cell)
         return self.board[i, j, k]
 
+    #TODO Check if I can place piece (if it is not occupied - maybe duplicit with move)
     def place_piece(self,cell, piece_value):
         i, j, k = self.board_to_array(cell)
         self.board[i, j, k] += piece_value

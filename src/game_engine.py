@@ -166,3 +166,37 @@ class Game(Board):
                     if not_in_outer_border:
                         outer_border.append(neighbour)
         return outer_border
+
+    def get_playable_border(self, cell):
+        playable_border = []
+        occupied_cells = self.get_occupied_cells()
+        occupied_cells.remove(cell)
+        for occupied_cell in occupied_cells:
+            neighbours = self.get_neighbours(occupied_cell)
+            for neighbour in neighbours:
+                if not self.has_piece(neighbour):
+                    not_in_outer_border = True
+                    for cell in playable_border:
+                        if cell == neighbour:
+                            not_in_outer_border = False
+                    if not_in_outer_border:
+                        playable_border.append(neighbour)
+        return playable_border
+
+    #TODO Fix logic in this function - it is probably almost correct
+    def move_preserves_continuity(self, cell_to_remove):
+        occupied_cells = self.get_occupied_cells()
+        occupied_cells_wo_piece = [c for c in occupied_cells
+                          if not (c.q == cell_to_remove.q and c.r == cell_to_remove.r and c.s == cell_to_remove.s)]
+        print("test")
+        self.print_cells(occupied_cells_wo_piece)
+
+        # If no occupied cells remain, continuity is trivially preserved
+        if not occupied_cells_wo_piece:
+            return True
+
+        connected = self.get_connected_cells(occupied_cells_wo_piece[0])
+        if len(occupied_cells) - 1 == len(connected):
+            return True
+        else:
+            return False
