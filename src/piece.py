@@ -59,6 +59,7 @@ class Ant(Piece):
     def __init__(self, colour):
         super().__init__(self.PieceType.ANT, colour)
 
+    #TODO implement freedom to move rule
     def get_possible_moves(self, coord, game_state):
         return game_state.get_playable_border(coord)
 
@@ -67,7 +68,7 @@ class Queen(Piece):
         super().__init__(self.PieceType.QUEEN, colour)
 
     def get_possible_moves(self, coord, game_state):
-        #TODO implement me
+        #TODO implement me (don't forget sliding rule)
         return
 
 class Spider(Piece):

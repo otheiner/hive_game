@@ -7,7 +7,8 @@ class Board:
     def __init__(self, halfwidth):
         self.halfwidth = halfwidth
         self.board_size = 2 * self.halfwidth + 1
-        self.board = np.zeros((self.board_size, self.board_size, self.board_size))
+        #Make sure that I really don't miss the array
+        #self.board = np.zeros((self.board_size, self.board_size, self.board_size))
         self.cells = {}  # key = (q,r,s), value = Cell
 
         for i in range(self.board_size):

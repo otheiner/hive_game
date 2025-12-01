@@ -23,6 +23,8 @@ class UI:
         self.cell_size = cell_size
         self.canvas_size_x = canvas_size_x
         self.canvas_size_y = canvas_size_y
+        self.screen_centre_x = self.canvas_size_x / 2
+        self.screen_centre_y = self.canvas_size_y / 2
 
     #This is method that has to be implemented for different UI's
     def draw_cell(self, coord, cell_texture = Texture.TextureType.NO_TEXTURE,
@@ -30,7 +32,16 @@ class UI:
         raise NotImplementedError
 
     # This is method that has to be implemented for different UI's
+    def draw_piece(self, cx, cy, piece_texture=Texture.TextureType.NO_TEXTURE,
+                   show_border=True):
+        raise NotImplementedError
+
+    # This is method that has to be implemented for different UI's
     def draw_stats(self):
+        raise NotImplementedError
+
+    # This is method that has to be implemented for different UI's
+    def draw_piece_banks(self):
         raise NotImplementedError
 
     def draw_cells(self, cells, cell_texture = Texture.TextureType.NO_TEXTURE, show_grid = False):
@@ -99,13 +110,11 @@ class MatplotlibGUI(UI):
             self.ax.axis('off')
         return self.ax
 
-    def draw_cell(self, coord, cell_texture = Texture.TextureType.NO_TEXTURE,
-                  show_coords= False, show_border= True):
+    def draw_piece(self, cx, cy, piece_texture = Texture.TextureType.NO_TEXTURE,
+                   show_border= True):
         ax = self._ensure_ax()
-        cx = self.cube_to_cartesian(coord.q, coord.r, coord.s)[0]
-        cy = self.cube_to_cartesian(coord.q, coord.r, coord.s)[1]
-        centre_x = self.canvas_size_x / 2
-        centre_y = self.canvas_size_x / 2
+        centre_x = self.screen_centre_x
+        centre_y = self.screen_centre_y
 
         fill_alpha_bkg = 1
         fill_alpha_circle = 1
@@ -114,62 +123,62 @@ class MatplotlibGUI(UI):
             border_alpha = 1
         else:
             border_alpha = 0
-        white_piece = (1.0, 0.99, 0.82) #cream colour
+        white_piece = (1.0, 0.99, 0.82)  # cream colour
         black_piece = 'black'
-        if cell_texture == Texture.TextureType.NO_TEXTURE:
+        if piece_texture == Texture.TextureType.NO_TEXTURE:
             piece_color = 'white'
             fill_color = 'white'
             fill_alpha_bkg = 0
             fill_alpha_circle = 0
-        elif cell_texture == Texture.TextureType.HIGHLIGHTED_CELL:
+        elif piece_texture == Texture.TextureType.HIGHLIGHTED_CELL:
             piece_color = 'white'
             fill_color = 'grey'
             fill_alpha_bkg = 0.7
             fill_alpha_circle = 0
-        elif cell_texture == Texture.TextureType.WHITE_QUEEN:
+        elif piece_texture == Texture.TextureType.WHITE_QUEEN:
             piece_color = 'yellow'
             fill_color = white_piece
-        elif cell_texture == Texture.TextureType.WHITE_SPIDER:
+        elif piece_texture == Texture.TextureType.WHITE_SPIDER:
             piece_color = 'brown'
             fill_color = white_piece
-        elif cell_texture == Texture.TextureType.WHITE_GRASSHOPPER:
+        elif piece_texture == Texture.TextureType.WHITE_GRASSHOPPER:
             piece_color = 'green'
             fill_color = white_piece
-        elif cell_texture == Texture.TextureType.WHITE_BEETLE:
+        elif piece_texture == Texture.TextureType.WHITE_BEETLE:
             piece_color = 'purple'
             fill_color = white_piece
-        elif cell_texture == Texture.TextureType.WHITE_ANT:
+        elif piece_texture == Texture.TextureType.WHITE_ANT:
             piece_color = 'blue'
             fill_color = white_piece
-        elif cell_texture == Texture.TextureType.WHITE_LADYBUG:
+        elif piece_texture == Texture.TextureType.WHITE_LADYBUG:
             piece_color = 'red'
             fill_color = white_piece
-        elif cell_texture == Texture.TextureType.WHITE_MOSQUITTO:
+        elif piece_texture == Texture.TextureType.WHITE_MOSQUITTO:
             piece_color = 'grey'
             fill_color = white_piece
-        elif cell_texture == Texture.TextureType.BLACK_QUEEN:
+        elif piece_texture == Texture.TextureType.BLACK_QUEEN:
             piece_color = 'yellow'
             fill_color = black_piece
-        elif cell_texture == Texture.TextureType.BLACK_SPIDER:
+        elif piece_texture == Texture.TextureType.BLACK_SPIDER:
             piece_color = 'brown'
             fill_color = black_piece
-        elif cell_texture == Texture.TextureType.BLACK_GRASSHOPPER:
+        elif piece_texture == Texture.TextureType.BLACK_GRASSHOPPER:
             piece_color = 'green'
             fill_color = black_piece
-        elif cell_texture == Texture.TextureType.BLACK_BEETLE:
+        elif piece_texture == Texture.TextureType.BLACK_BEETLE:
             piece_color = 'purple'
             fill_color = black_piece
-        elif cell_texture == Texture.TextureType.BLACK_ANT:
+        elif piece_texture == Texture.TextureType.BLACK_ANT:
             piece_color = 'blue'
             fill_color = black_piece
-        elif cell_texture == Texture.TextureType.BLACK_LADYBUG:
+        elif piece_texture == Texture.TextureType.BLACK_LADYBUG:
             piece_color = 'red'
             fill_color = black_piece
-        elif cell_texture == Texture.TextureType.BLACK_MOSQUITTO:
+        elif piece_texture == Texture.TextureType.BLACK_MOSQUITTO:
             piece_color = 'grey'
             fill_color = black_piece
         else:
-            print(f"Warning: {cell_texture} is unknown, or not implemented in this GUI. "
+            print(f"Warning: {piece_texture} is unknown, or not implemented in this GUI. "
                   f"Setting turquoise.")
             fill_color = 'turquoise'
             piece_color = 'turquoise'
@@ -177,14 +186,27 @@ class MatplotlibGUI(UI):
         rgba_fill = mcolors.to_rgba(fill_color, fill_alpha_bkg)
         rgba_border = mcolors.to_rgba(border_color, border_alpha)
         hexagon = patches.Polygon(self.cell_corners(centre_x + cx, centre_y + cy),
-                          closed=True, edgecolor=rgba_border, facecolor=rgba_fill)
+                                  closed=True, edgecolor=rgba_border, facecolor=rgba_fill)
         ax.add_patch(hexagon)
         rgba_fill = mcolors.to_rgba(piece_color, fill_alpha_circle)
-        circle = patches.Circle((centre_x + cx, centre_y + cy), radius=self.cell_size/3,
-                                facecolor=rgba_fill)
+        circle = patches.Circle((centre_x + cx, centre_y + cy),
+                                radius=self.cell_size / 3, facecolor=rgba_fill)
         ax.add_patch(circle)
+        return ax
+
+    def draw_cell(self, coord, cell_texture = Texture.TextureType.NO_TEXTURE,
+                  show_coords= False, show_border= True):
+        cx = self.cube_to_cartesian(coord.q, coord.r, coord.s)[0]
+        cy = self.cube_to_cartesian(coord.q, coord.r, coord.s)[1]
+        self.draw_piece(cx, cy, cell_texture, show_border=show_border)
+
+        ax = self._ensure_ax()
+        centre_x = self.canvas_size_x / 2
+        centre_y = self.canvas_size_x / 2
+
         if show_coords:
-            ax.text(centre_x + cx - self.cell_size/2, centre_y + cy,f"{coord.q, coord.r, coord.s}",
+            ax.text(self.screen_centre_x + cx - self.cell_size/2,
+                    self.screen_centre_x + cy,f"{coord.q, coord.r, coord.s}",
                     fontsize=8, color='red')
         return ax
 
@@ -195,8 +217,33 @@ class MatplotlibGUI(UI):
         else:
             text_turn = 'Black Turn'
         text_round_no = self.game.round_counter
-        ax.text(0.8*self.canvas_size_x, 0.93*self.canvas_size_y,
+        ax.text(0.4*self.canvas_size_x, 0.93*self.canvas_size_y,
                 f"{text_turn}\nRound: {text_round_no}", fontsize=20, color='black')
+
+    def draw_piece_banks(self):
+        indent_x = 0.45
+        indent_y = - 0.55
+        piece_separation = self.cell_size*1.2
+        bottom_y = self.canvas_size_x  * indent_y
+        black_x = -1* self.canvas_size_x  * indent_x
+        white_x =  self.canvas_size_x *   indent_x
+
+        #Draw white bank
+        piece_no = 0
+        for piece in self.game.piece_bank_white.values():
+            piece_no += 1
+            if piece.coord is None:
+                self.draw_piece(white_x, bottom_y + piece_no*(self.cell_size + piece_separation),
+                                piece.texture)
+
+        #Draw black bank
+        piece_no = 0
+        for piece in self.game.piece_bank_black.values():
+            piece_no += 1
+            if piece.coord is None:
+                self.draw_piece(black_x, bottom_y + piece_no*(self.cell_size + piece_separation),
+                                piece.texture)
+
 
     def show_canvas(self):
         if self.ax is None:

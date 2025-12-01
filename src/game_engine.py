@@ -131,13 +131,20 @@ class Game(Board):
 
     def place_piece(self,coord, piece):
         if piece.coord is not None:
-            print(f"Piece {piece} is already on the board. You can only move it now.")
+            print(f"Piece {piece} is already on the board.")
             return False
         board_cell = self.cells[(coord.q, coord.r, coord.s)]
+        outer_border = self.get_outer_border()
+        #If not first move
+        if len(outer_border) !=0:
+            if board_cell not in self.get_outer_border():
+                print(f"Cannot place {piece} at this position because it would create separate island.")
+                return False
         if not board_cell.has_piece():
             board_cell.add_piece(piece)
             piece.coord = board_cell.coord
             self.update_stats()
+            print(f"Piece {piece} is now on the board at {coord}.")
             return True
         else:
             print(f"Piece {piece.type} can be place only on empty cell. Cell {coord} is occupied")
@@ -190,14 +197,14 @@ class Game(Board):
 
     #TODO Make sure that this works with pieces that can move on top of others
     def move_piece(self, current_coord, new_coord, piece):
+        #TODO Check that the move is legal
         current_cell = self.get_cell(current_coord)
         new_cell = self.get_cell(new_coord)
         if current_cell.get_top_piece() != piece:
-            print(f"Top piece is {current_cell.get_top_piece()}, desired piece is {piece}.")
-            print("Invalid move: Cell doesn't contain given piece, or the piece is not on top.")
+            print(f"ERROR: Can't move. Top piece is {current_cell.get_top_piece()}, desired piece is {piece}.")
             return False
         if new_cell.get_top_piece() is not None:
-            print("Invalid move: Target cell is not empty.")
+            print("ERROR: Invalid move. Target cell is not empty.")
             return False
         print(f"Moving {piece} from {current_coord} to {new_coord}.")
         current_cell.remove_piece(piece)
