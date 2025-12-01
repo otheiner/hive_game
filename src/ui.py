@@ -25,25 +25,28 @@ class UI:
         self.canvas_size_y = canvas_size_y
 
     #This is method that has to be implemented for different UI's
-    def draw_cell(self, coord, cell_texture = Texture.TextureType.NO_TEXTURE):
+    def draw_cell(self, coord, cell_texture = Texture.TextureType.NO_TEXTURE,
+                  show_coords= False, show_border= True):
         raise NotImplementedError
 
     # This is method that has to be implemented for different UI's
     def draw_stats(self):
         raise NotImplementedError
 
-    def draw_cells(self, cells, cell_texture = Texture.TextureType.NO_TEXTURE):
+    def draw_cells(self, cells, cell_texture = Texture.TextureType.NO_TEXTURE, show_grid = False):
         for cell in cells:
-            self.draw_cell(cell.coord, cell_texture=cell_texture)
+            self.draw_cell(cell.coord, cell_texture=cell_texture, show_border = show_grid)
         return
 
-    def draw_board(self):
+    def draw_board(self, show_coords = False, show_grid = False):
         for cell in self.game.cells.values():
             top_piece = cell.get_top_piece()
             if top_piece is None:
-                self.draw_cell(cell.coord, cell_texture=Texture.TextureType.NO_TEXTURE)
+                self.draw_cell(cell.coord, cell_texture=Texture.TextureType.NO_TEXTURE,
+                               show_coords=show_coords, show_border = show_grid)
             else:
-                self.draw_cell(cell.coord, cell_texture=top_piece.texture)
+                self.draw_cell(cell.coord, cell_texture=top_piece.texture,
+                               show_coords=show_coords, show_border=True)
 
     def draw_outer_border(self):
         outer_border = self.game.get_outer_border()
@@ -96,7 +99,8 @@ class MatplotlibGUI(UI):
             self.ax.axis('off')
         return self.ax
 
-    def draw_cell(self, coord, cell_texture = Texture.TextureType.NO_TEXTURE):
+    def draw_cell(self, coord, cell_texture = Texture.TextureType.NO_TEXTURE,
+                  show_coords= False, show_border= True):
         ax = self._ensure_ax()
         cx = self.cube_to_cartesian(coord.q, coord.r, coord.s)[0]
         cy = self.cube_to_cartesian(coord.q, coord.r, coord.s)[1]
@@ -106,6 +110,10 @@ class MatplotlibGUI(UI):
         fill_alpha_bkg = 1
         fill_alpha_circle = 1
         border_color = 'black'
+        if show_border:
+            border_alpha = 1
+        else:
+            border_alpha = 0
         white_piece = (1.0, 0.99, 0.82) #cream colour
         black_piece = 'black'
         if cell_texture == Texture.TextureType.NO_TEXTURE:
@@ -167,13 +175,17 @@ class MatplotlibGUI(UI):
             piece_color = 'turquoise'
 
         rgba_fill = mcolors.to_rgba(fill_color, fill_alpha_bkg)
+        rgba_border = mcolors.to_rgba(border_color, border_alpha)
         hexagon = patches.Polygon(self.cell_corners(centre_x + cx, centre_y + cy),
-                          closed=True, edgecolor=border_color, facecolor=rgba_fill)
+                          closed=True, edgecolor=rgba_border, facecolor=rgba_fill)
         ax.add_patch(hexagon)
         rgba_fill = mcolors.to_rgba(piece_color, fill_alpha_circle)
         circle = patches.Circle((centre_x + cx, centre_y + cy), radius=self.cell_size/3,
                                 facecolor=rgba_fill)
         ax.add_patch(circle)
+        if show_coords:
+            ax.text(centre_x + cx - self.cell_size/2, centre_y + cy,f"{coord.q, coord.r, coord.s}",
+                    fontsize=8, color='red')
         return ax
 
     def draw_stats(self):

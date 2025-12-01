@@ -1,7 +1,5 @@
-import importlib
-import texture
-importlib.reload(texture)
 from texture import Texture
+
 
 
 class Piece:
@@ -21,6 +19,7 @@ class Piece:
     def __init__(self, piece_type, piece_color):
         self.type = piece_type
         self.color = piece_color
+        self.coord = None
         if self.type == Piece.PieceType.QUEEN and self.color == Piece.PieceColour.BLACK:
             self.texture = Texture.TextureType.BLACK_QUEEN
         if self.type == Piece.PieceType.ANT and self.color == Piece.PieceColour.BLACK:

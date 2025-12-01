@@ -12,32 +12,32 @@ class Game(Board):
         super().__init__(halfwidth)
         self.white_turn = True
         self.round_counter = 0
-        self.piece_bank_white = [Queen(Piece.PieceColour.WHITE),
-                                 Spider(Piece.PieceColour.WHITE),
-                                 Spider(Piece.PieceColour.WHITE),
-                                 Beetle(Piece.PieceColour.WHITE),
-                                 Beetle(Piece.PieceColour.WHITE),
-                                 Grasshopper(Piece.PieceColour.WHITE),
-                                 Grasshopper(Piece.PieceColour.WHITE),
-                                 Grasshopper(Piece.PieceColour.WHITE),
-                                 Ant(Piece.PieceColour.WHITE),
-                                 Ant(Piece.PieceColour.WHITE),
-                                 Ant(Piece.PieceColour.WHITE),
-                                 Mosquito(Piece.PieceColour.WHITE),
-                                 Ladybug(Piece.PieceColour.WHITE)]
-        self.piece_bank_black = [Queen(Piece.PieceColour.BLACK),
-                                 Spider(Piece.PieceColour.BLACK),
-                                 Spider(Piece.PieceColour.BLACK),
-                                 Beetle(Piece.PieceColour.BLACK),
-                                 Beetle(Piece.PieceColour.BLACK),
-                                 Grasshopper(Piece.PieceColour.BLACK),
-                                 Grasshopper(Piece.PieceColour.BLACK),
-                                 Grasshopper(Piece.PieceColour.BLACK),
-                                 Ant(Piece.PieceColour.BLACK),
-                                 Ant(Piece.PieceColour.BLACK),
-                                 Ant(Piece.PieceColour.BLACK),
-                                 Mosquito(Piece.PieceColour.BLACK),
-                                 Ladybug(Piece.PieceColour.BLACK)]
+        self.piece_bank_white = {"queen" : Queen(Piece.PieceColour.WHITE),
+                                 "spider1" : Spider(Piece.PieceColour.WHITE),
+                                 "spider2": Spider(Piece.PieceColour.WHITE),
+                                 "beetle1" : Beetle(Piece.PieceColour.WHITE),
+                                 "beetle2" : Beetle(Piece.PieceColour.WHITE),
+                                 "grasshopper1" : Grasshopper(Piece.PieceColour.WHITE),
+                                 "grasshopper2" : Grasshopper(Piece.PieceColour.WHITE),
+                                 "grasshopper3" : Grasshopper(Piece.PieceColour.WHITE),
+                                 "ant1" : Ant(Piece.PieceColour.WHITE),
+                                 "ant2" : Ant(Piece.PieceColour.WHITE),
+                                 "ant3" : Ant(Piece.PieceColour.WHITE),
+                                 "mosquito" : Mosquito(Piece.PieceColour.WHITE),
+                                 "ladybug" : Ladybug(Piece.PieceColour.WHITE)}
+        self.piece_bank_black = {"queen" :Queen(Piece.PieceColour.BLACK),
+                                 "spider1" :Spider(Piece.PieceColour.BLACK),
+                                 "spider2" :Spider(Piece.PieceColour.BLACK),
+                                 "beetle1" : Beetle(Piece.PieceColour.BLACK),
+                                 "beetle2" : Beetle(Piece.PieceColour.BLACK),
+                                 "grasshopper1" : Grasshopper(Piece.PieceColour.BLACK),
+                                 "grasshopper2" : Grasshopper(Piece.PieceColour.BLACK),
+                                 "grasshopper3" : Grasshopper(Piece.PieceColour.BLACK),
+                                 "ant1" : Ant(Piece.PieceColour.BLACK),
+                                 "ant2" : Ant(Piece.PieceColour.BLACK),
+                                 "ant3" : Ant(Piece.PieceColour.BLACK),
+                                 "mosquito" : Mosquito(Piece.PieceColour.BLACK),
+                                 "ladybug" : Ladybug(Piece.PieceColour.BLACK)}
 
     @staticmethod
     def print_cells(cells):
@@ -130,9 +130,13 @@ class Game(Board):
         return playable_border
 
     def place_piece(self,coord, piece):
+        if piece.coord is not None:
+            print(f"Piece {piece} is already on the board. You can only move it now.")
+            return False
         board_cell = self.cells[(coord.q, coord.r, coord.s)]
         if not board_cell.has_piece():
             board_cell.add_piece(piece)
+            piece.coord = board_cell.coord
             self.update_stats()
             return True
         else:
@@ -181,6 +185,7 @@ class Game(Board):
             print("Can't remove piece: Cell doesn't contain given piece, or the piece is not on top.")
             return False
         current_board_cell.remove_piece(current_board_cell.get_top_piece())
+        piece.coord = None
         return True
 
     #TODO Make sure that this works with pieces that can move on top of others
@@ -197,6 +202,7 @@ class Game(Board):
         print(f"Moving {piece} from {current_coord} to {new_coord}.")
         current_cell.remove_piece(piece)
         new_cell.add_piece(piece)
+        piece.coord = new_cell.coord
         self.update_stats()
         return True
 

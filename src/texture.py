@@ -17,7 +17,3 @@ class Texture:
         EMPTY_CELL = "empty"
         NO_TEXTURE = "no_texture"
         HIGHLIGHTED_CELL = "highlighted_cell"
-
-    def __eq__(self, other):
-        return isinstance(other, Texture.TextureType) and \
-               (self.q, self.r, self.s) == (other.q, other.r, other.s)
