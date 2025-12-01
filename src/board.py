@@ -1,11 +1,6 @@
 import numpy as np
-from cell import Cell, CubeCoordinates
+from cell import Cell, GridCoordinates
 from piece import Piece
-
-# # cell = 0 - out of board
-# # cell = 1 - board
-# # cell > 1 - piece
-# # different pieces should be 10 100 1000 .... to be able to differentiate when they are stacked
 
 class Board:
     #TODO Maybe it is possible to represent board using sparse matrices
@@ -23,7 +18,6 @@ class Board:
                         self.cells[(coord.q, coord.r, coord.s)] = Cell(coord)
                     except:
                         pass
-        #print(self.cells)
 
     def coord_to_array(self, coord):
         if (abs(coord.q)*2+1 > self.board_size or
@@ -43,7 +37,7 @@ class Board:
         q = i - self.halfwidth
         r = j - self.halfwidth
         s = k - self.halfwidth
-        coord = CubeCoordinates(q, r, s)
+        coord = GridCoordinates(q, r, s)
         return coord
 
     def get_cell(self, coord):

@@ -11,7 +11,7 @@ class GridCoordinates:
         self.s = s
 
     def __eq__(self, other):
-        return isinstance(other, CubeCoordinates) and \
+        return isinstance(other, GridCoordinates) and \
                (self.q, self.r, self.s) == (other.q, other.r, other.s)
 
     def __hash__(self):

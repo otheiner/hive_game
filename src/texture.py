@@ -1,0 +1,23 @@
+class Texture:
+    class TextureType:
+        WHITE_QUEEN = "white_queen"
+        WHITE_ANT = "white_ant"
+        WHITE_SPIDER = "white_spider"
+        WHITE_GRASSHOPPER = "white_grasshopper"
+        WHITE_BEETLE = "white_beetle"
+        WHITE_MOSQUITTO = "white_mosquitto"
+        WHITE_LADYBUG = "white_ladybug"
+        BLACK_QUEEN = "black_queen"
+        BLACK_ANT = "black_ant"
+        BLACK_SPIDER = "black_spider"
+        BLACK_GRASSHOPPER = "black_grasshopper"
+        BLACK_BEETLE = "black_beetle"
+        BLACK_MOSQUITTO = "black_mosquitto"
+        BLACK_LADYBUG = "black_ladybug"
+        EMPTY_CELL = "empty"
+        NO_TEXTURE = "no_texture"
+        HIGHLIGHTED_CELL = "highlighted_cell"
+
+    def __eq__(self, other):
+        return isinstance(other, Texture.TextureType) and \
+               (self.q, self.r, self.s) == (other.q, other.r, other.s)

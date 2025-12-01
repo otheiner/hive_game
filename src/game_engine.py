@@ -1,12 +1,43 @@
 import importlib
 import board as board_lib
+import piece as piece_lib
 importlib.reload(board_lib)
+importlib.reload(piece_lib)
 from board import Board
+from piece import Piece, Ant, Queen, Spider, Grasshopper, Beetle, Mosquito, Ladybug
 import copy
 
 class Game(Board):
     def __init__(self, halfwidth):
         super().__init__(halfwidth)
+        self.white_turn = True
+        self.round_counter = 0
+        self.piece_bank_white = [Queen(Piece.PieceColour.WHITE),
+                                 Spider(Piece.PieceColour.WHITE),
+                                 Spider(Piece.PieceColour.WHITE),
+                                 Beetle(Piece.PieceColour.WHITE),
+                                 Beetle(Piece.PieceColour.WHITE),
+                                 Grasshopper(Piece.PieceColour.WHITE),
+                                 Grasshopper(Piece.PieceColour.WHITE),
+                                 Grasshopper(Piece.PieceColour.WHITE),
+                                 Ant(Piece.PieceColour.WHITE),
+                                 Ant(Piece.PieceColour.WHITE),
+                                 Ant(Piece.PieceColour.WHITE),
+                                 Mosquito(Piece.PieceColour.WHITE),
+                                 Ladybug(Piece.PieceColour.WHITE)]
+        self.piece_bank_black = [Queen(Piece.PieceColour.BLACK),
+                                 Spider(Piece.PieceColour.BLACK),
+                                 Spider(Piece.PieceColour.BLACK),
+                                 Beetle(Piece.PieceColour.BLACK),
+                                 Beetle(Piece.PieceColour.BLACK),
+                                 Grasshopper(Piece.PieceColour.BLACK),
+                                 Grasshopper(Piece.PieceColour.BLACK),
+                                 Grasshopper(Piece.PieceColour.BLACK),
+                                 Ant(Piece.PieceColour.BLACK),
+                                 Ant(Piece.PieceColour.BLACK),
+                                 Ant(Piece.PieceColour.BLACK),
+                                 Mosquito(Piece.PieceColour.BLACK),
+                                 Ladybug(Piece.PieceColour.BLACK)]
 
     @staticmethod
     def print_cells(cells):
@@ -21,6 +52,10 @@ class Game(Board):
                       self.cells[(coord.q    , coord.r + 1, coord.s - 1)],
                       self.cells[(coord.q    , coord.r - 1, coord.s + 1)]]
         return neighbours
+
+    def update_stats(self):
+        self.white_turn = not self.white_turn
+        self.round_counter += 1
 
     def get_occupied_cells(self):
         occupied_cells = []
@@ -98,6 +133,7 @@ class Game(Board):
         board_cell = self.cells[(coord.q, coord.r, coord.s)]
         if not board_cell.has_piece():
             board_cell.add_piece(piece)
+            self.update_stats()
             return True
         else:
             print(f"Piece {piece.type} can be place only on empty cell. Cell {coord} is occupied")
@@ -161,4 +197,8 @@ class Game(Board):
         print(f"Moving {piece} from {current_coord} to {new_coord}.")
         current_cell.remove_piece(piece)
         new_cell.add_piece(piece)
+        self.update_stats()
         return True
+
+    def take_piece_from_bank(self):
+        return piece
