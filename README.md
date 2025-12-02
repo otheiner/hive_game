@@ -1,3 +1,3 @@
 # Hive game
 
-This is my Python implementation of hive game (https://en.wikipedia.org/wiki/Hive_(game))
+WIP: This is my Python implementation of Hive board game (https://en.wikipedia.org/wiki/Hive_(game)).
