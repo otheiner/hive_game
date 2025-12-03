@@ -248,18 +248,45 @@ class MatplotlibGUI(UI):
                 self.draw_piece(black_x, bottom_y + piece_no*(self.cell_size + piece_separation),
                                 piece.texture)
 
+    def draw_board(self, show_coords = False, show_grid = False):
+        self.clear_canvas()
+        for cell in self.game.cells.values():
+            top_piece = cell.get_top_piece()
+            if top_piece is None:
+                self.draw_cell(cell.coord, cell_texture=Texture.TextureType.NO_TEXTURE,
+                               show_coords=show_coords, show_border = show_grid)
+            else:
+                self.draw_cell(cell.coord, cell_texture=top_piece.texture,
+                               show_coords=show_coords, show_border=True)
 
     def show_canvas(self):
         if self.ax is None:
             self._ensure_ax()
         plt.draw()
         plt.pause(0.001)
+        return
+
+    def clear_canvas(self):
+        if self.ax is None:
+            return
+        self._ensure_ax().clear()
+        self.ax.set_xlim(0, self.canvas_size_x)
+        self.ax.set_ylim(0, self.canvas_size_y)
+        self.ax.set_aspect('equal')
+        self.ax.axis('off')
+        return
 
     def wait_for_user_input(self,player_color):
-        print(f"----- player {player_color} -----")
-        start_move  = input("Enter q, r, (s) of start: ")
-        end_move = input("Enter q, r, (s) of end: ")
-        piece = input("Name of piece: ")
+        print(f"----- Player {player_color}, round {self.game.round_counter} -----")
+        piece_name = input("Enter name of piece (or 'q' to end game): ")
+        if piece_name == 'q':
+            return None
+        start_move  = input("Enter q r (s) of start (or 'q' to end game): ")
+        if start_move == 'q':
+            return None
+        end_move = input("Enter q r (s) of end (or 'q' to end game): ")
+        if end_move == 'q':
+            return None
 
         if player_color == "white":
             piece_bank = self.game.piece_bank_white
@@ -268,14 +295,58 @@ class MatplotlibGUI(UI):
         else:
             raise ValueError(f"Invalid player color: {player_color}")
 
-        #This is piece that is in the piece bank
-        if start_move == "bank":
+        #Process start coordinates input
+        if start_move.strip() == "bank":
             start_coord = None
         else:
-            entered_start_coord = [int(elem.strip()) for elem in start_move.split(",")]
-            start_coord = GridCoordinates(entered_start_coord[0], entered_start_coord[1])
-        entered_end_coord = [int(elem.strip()) for elem in end_move.split(",")]
-        end_coord = GridCoordinates(entered_end_coord[0], entered_end_coord[1])
-        piece_object = piece_bank[piece]
+            entered_start_coord = []
+            for coord in start_move.split(" "):
+                coord = coord.strip()
+                if coord.lstrip("+-").isdigit():
+                    entered_start_coord.append(int(coord))
+                else:
+                    print(f"Invalid starting coordinates. Enter the move again again.")
+                    return self.wait_for_user_input(player_color)
+            if len(entered_start_coord) == 2:
+                start_coord = GridCoordinates(entered_start_coord[0], entered_start_coord[1])
+            else:
+                print(f"Staring coordinates need to have two components")
+                return self.wait_for_user_input(player_color)
 
-        return Move(start_coord, end_coord, piece_object)
+        #Process end coordinates input
+        entered_end_coord = []
+        for coord in end_move.split(" "):
+            coord = coord.strip()
+            if coord.lstrip("+-").isdigit():
+                entered_end_coord.append(int(coord))
+            else:
+                print(f"Invalid destination coordinates. Enter the move again.")
+                return self.wait_for_user_input(player_color)
+        if len(entered_end_coord) == 2:
+            end_coord = GridCoordinates(entered_end_coord[0], entered_end_coord[1])
+        else:
+            print(f"Destination coordinates need to have two components")
+            return self.wait_for_user_input(player_color)
+
+        #Process piece input
+        #Check if piece is on given coordinates on top of the piece stack
+        if start_coord is not None:
+            top_piece = self.game.cells[(start_coord.q, start_coord.r, start_coord.s)].get_top_piece()
+            if top_piece is not None:
+                if (top_piece.type == piece_name) and (top_piece.color == player_color):
+                    #TODO I think there is problem with pointers
+                    print(f"test: {top_piece.type} {piece_name} {top_piece.color}")
+                    return Move(start_coord, end_coord, top_piece)
+                else:
+                    print(f"Piece {piece_name} is not at starting coordinates. Enter move again.")
+                    return self.wait_for_user_input(player_color)
+            else:
+                print("There is no piece on given coordinates. Enter move again.")
+                return self.wait_for_user_input(player_color)
+        #If piece is not on board check if it is in piece bank
+        else:
+            for piece in piece_bank.values():
+                if piece.type == piece_name and piece.coord is None:
+                    return Move(start_coord, end_coord, piece)
+            print(f"Piece {piece_name} not in the bank. Enter the move again.")
+            return self.wait_for_user_input(player_color)

@@ -6,4 +6,4 @@ class Move:
         self.piece = piece
 
     def __repr__(self):
-        return f"{self.piece.PieceColour} {self.piece.PieceType} from {self.current_coord} to {self.final_coord}"
+        return f"{self.piece} from {self.current_coord} to {self.final_coord}"

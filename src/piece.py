@@ -9,7 +9,7 @@ class Piece:
         SPIDER = "spider"
         GRASSHOPPER = "grasshopper"
         BEETLE = "beetle"
-        MOSQUITTO = "mosquitto"
+        MOSQUITTO = "mosquito"
         LADYBUG = "ladybug"
 
     class PieceColour():

@@ -141,6 +141,7 @@ class Game(Board):
         #If not first move
         if len(outer_border) !=0:
             if board_cell not in self.get_outer_border():
+                print(self.get_outer_border())
                 print(f"Cannot place {piece} at this position because it would create separate island.")
                 return False
         if not board_cell.has_piece():
@@ -212,7 +213,9 @@ class Game(Board):
         if current_cell.get_top_piece() != piece:
             print(f"ERROR: Can't move. Top piece is {current_cell.get_top_piece()}, desired piece is {piece}.")
             return False
-        if new_cell.get_top_piece() is not None:
+        if ((new_cell.get_top_piece() is not None) or
+            (piece.type != Piece.PieceType.BEETLE) or
+            (piece.type != Piece.PieceType.MOSQUITTO)):
             print("ERROR: Invalid move. Target cell is not empty.")
             return False
         print(f"Moving {piece} from {current_coord} to {new_coord}.")
