@@ -10,8 +10,10 @@ import copy
 class Game(Board):
     def __init__(self, halfwidth):
         super().__init__(halfwidth)
+        self.winning_state = False
+        #TODO Write checking for winning state
         self.white_turn = True
-        self.round_counter = 0
+        self.round_counter = 1
         self.piece_bank_white = {"queen" : Queen(Piece.PieceColour.WHITE),
                                  "spider1" : Spider(Piece.PieceColour.WHITE),
                                  "spider2": Spider(Piece.PieceColour.WHITE),
@@ -55,7 +57,8 @@ class Game(Board):
 
     def update_stats(self):
         self.white_turn = not self.white_turn
-        self.round_counter += 1
+        if self.white_turn:
+            self.round_counter += 1
 
     def get_occupied_cells(self):
         occupied_cells = []
@@ -150,40 +153,46 @@ class Game(Board):
             print(f"Piece {piece.type} can be place only on empty cell. Cell {coord} is occupied")
             return False
 
-    def is_move_legal(self, current_coord, new_coord, piece):
-        #Check if the piece is on the top of the cell
-        current_cell = self.get_cell(current_coord)
-        if current_cell.get_top_piece() != piece:
-            print(f"Warning: {piece.type} is not at cell {current_cell.coord} or "
-                  f"is not at the top of the cell.")
-            return False
-
-        # Let's now do the test with copy of the game
+    def is_move_legal(self, move):
+        #TODO Implement validation of initial piece placement and beginning of the game
+        move = copy.deepcopy(move)
         game_copy = copy.deepcopy(self)
-        current_cell = game_copy.get_cell(current_coord)
-        new_cell = game_copy.get_cell(new_coord)
-        #Check if the move follows movement rules of the piece
-        if not new_cell in piece.get_possible_moves(current_coord, game_copy):
-            print(f"Warning: {piece.type} at cell {current_coord} cannot move to cell "
-                  f"{new_coord}. This would violate movement pattern.")
-            return False
-
-        #Check if movement doesn't results in disconnected island
-        game_copy.move_piece(current_coord, new_coord, piece)
-        if not game_copy.is_valid_state():
-            print(f"Warning: {piece.type} at cell {current_cell.coordinates()} cannot move to cell "
-                  f"{new_cell.coordinates()}. This would result in disconnect island.")
-            return False
-
-        #By removing the piece completely we check if the island doesn't get disconnected during the move
-        #We already moved the piece, so we remove it from new location
-        game_copy.remove_piece(new_coord, piece)
-        if not game_copy.is_valid_state():
-            print(f"Warning: {piece.type} at cell {current_coord} cannot move to cell "
-                  f"{new_coord}. This would result in disconnect island.")
-            return False
+        if move.current_coord is None:
+            # Let's now do the test with copy of the game
+            return game_copy.place_piece(move.final_coord, move.piece)
         else:
-            return True
+            #Check if the piece is on the top of the cell
+            piece = move.piece
+            current_cell = self.get_cell(move.current_coord)
+            if current_cell.get_top_piece() != piece:
+                print(f"Warning: {piece.type} is not at cell {current_cell.coord} or "
+                      f"is not at the top of the cell.")
+                return False
+
+            # Let's now do the test with copy of the game
+            new_cell = game_copy.get_cell(move.final_coord)
+            #Check if the move follows movement rules of the piece
+            if not new_cell in piece.get_possible_moves(move.current_coord, game_copy):
+                print(f"Warning: {piece.type} at cell {move.current_coord} cannot move to cell "
+                      f"{move.final_coord}. This would violate movement pattern.")
+                return False
+
+            #Check if movement doesn't result in disconnected island
+            game_copy.move_piece(move.current_coord, move.final_coord, piece)
+            if not game_copy.is_valid_state():
+                print(f"Warning: {piece.type} at cell {move.current_coord} cannot move to cell "
+                      f"{move.final_coord}. This would result in disconnect island.")
+                return False
+
+            #By removing the piece completely we check if the island doesn't get disconnected during the move
+            #We already moved the piece, so we remove it from new location
+            game_copy.remove_piece(move.final_coord, piece)
+            if not game_copy.is_valid_state():
+                print(f"Warning: {piece.type} at cell {move.current_coord} cannot move to cell "
+                      f"{move.final_coord}. This would result in disconnect island.")
+                return False
+            else:
+                return True
 
     def remove_piece(self, coord, piece):
         current_board_cell = self.get_cell(coord)
@@ -213,5 +222,17 @@ class Game(Board):
         self.update_stats()
         return True
 
-    def take_piece_from_bank(self):
-        return piece
+    def make_move(self, move):
+        start_position = move.current_coord
+        end_position = move.final_coord
+        piece = move.piece
+
+        #TODO This might be written better, I think
+        if self.is_move_legal(move):
+            if move.current_coord is None:
+                return self.place_piece(end_position, piece)
+            else:
+                return self.move_piece(start_position, end_position, piece)
+        else:
+            print(f"Cannot make move {move}.")
+            return False

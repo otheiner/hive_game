@@ -1,6 +1,7 @@
 import matplotlib.patches as patches
 import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
+import matplotlib
 import math
 
 import importlib
@@ -8,6 +9,7 @@ import cell as cell_lib
 import board as board_lib
 import piece as piece_lib
 import texture as texture_lib
+#from player import Player, HumanPlayer, Move
 importlib.reload(cell_lib)
 importlib.reload(piece_lib)
 importlib.reload(board_lib)
@@ -15,6 +17,7 @@ importlib.reload(texture_lib)
 from piece import Piece, Ant, Queen, Spider, Grasshopper, Beetle
 from texture import Texture
 from cell import Cell, GridCoordinates
+from move import Move
 from board import Board
 
 class UI:
@@ -98,12 +101,14 @@ class UI:
 class MatplotlibGUI(UI):
     def __init__(self, game_state, cell_size = 1,  canvas_size_x = 20, canvas_size_y = 20):
         super().__init__(game_state, cell_size, canvas_size_x, canvas_size_y)
+        matplotlib.use("TkAgg")
+        plt.ion()
         self.ax = None
 
     def _ensure_ax(self):
         """Internal method to create a shared Axes if it doesn't exist."""
         if self.ax is None:
-            fig, self.ax = plt.subplots(figsize=(15,15), facecolor='white')
+            fig, self.ax = plt.subplots(figsize=(10,10), facecolor='white')
             self.ax.set_xlim(0, self.canvas_size_x)
             self.ax.set_ylim(0, self.canvas_size_y)
             self.ax.set_aspect('equal')
@@ -113,8 +118,6 @@ class MatplotlibGUI(UI):
     def draw_piece(self, cx, cy, piece_texture = Texture.TextureType.NO_TEXTURE,
                    show_border= True):
         ax = self._ensure_ax()
-        centre_x = self.screen_centre_x
-        centre_y = self.screen_centre_y
 
         fill_alpha_bkg = 1
         fill_alpha_circle = 1
@@ -133,7 +136,7 @@ class MatplotlibGUI(UI):
         elif piece_texture == Texture.TextureType.HIGHLIGHTED_CELL:
             piece_color = 'white'
             fill_color = 'grey'
-            fill_alpha_bkg = 0.7
+            fill_alpha_bkg = 0.2
             fill_alpha_circle = 0
         elif piece_texture == Texture.TextureType.WHITE_QUEEN:
             piece_color = 'yellow'
@@ -185,13 +188,14 @@ class MatplotlibGUI(UI):
 
         rgba_fill = mcolors.to_rgba(fill_color, fill_alpha_bkg)
         rgba_border = mcolors.to_rgba(border_color, border_alpha)
-        hexagon = patches.Polygon(self.cell_corners(centre_x + cx, centre_y + cy),
+        hexagon = patches.Polygon(self.cell_corners(self.screen_centre_x + cx, self.screen_centre_y + cy),
                                   closed=True, edgecolor=rgba_border, facecolor=rgba_fill)
         ax.add_patch(hexagon)
         rgba_fill = mcolors.to_rgba(piece_color, fill_alpha_circle)
-        circle = patches.Circle((centre_x + cx, centre_y + cy),
+        circle = patches.Circle((self.screen_centre_x + cx, self.screen_centre_y + cy),
                                 radius=self.cell_size / 3, facecolor=rgba_fill)
         ax.add_patch(circle)
+        self.ax.figure.canvas.draw_idle()
         return ax
 
     def draw_cell(self, coord, cell_texture = Texture.TextureType.NO_TEXTURE,
@@ -205,8 +209,8 @@ class MatplotlibGUI(UI):
         centre_y = self.canvas_size_x / 2
 
         if show_coords:
-            ax.text(self.screen_centre_x + cx - self.cell_size/2,
-                    self.screen_centre_x + cy,f"{coord.q, coord.r, coord.s}",
+            ax.text(self.screen_centre_x + cx - self.cell_size*0.7,
+                    self.screen_centre_y + cy,f"{coord.q, coord.r}",
                     fontsize=8, color='red')
         return ax
 
@@ -218,11 +222,11 @@ class MatplotlibGUI(UI):
             text_turn = 'Black Turn'
         text_round_no = self.game.round_counter
         ax.text(0.4*self.canvas_size_x, 0.93*self.canvas_size_y,
-                f"{text_turn}\nRound: {text_round_no}", fontsize=20, color='black')
+                f"{text_turn}\nRound: {text_round_no}", fontsize=12, color='black')
 
     def draw_piece_banks(self):
         indent_x = 0.45
-        indent_y = - 0.55
+        indent_y = - 0.48
         piece_separation = self.cell_size*1.2
         bottom_y = self.canvas_size_x  * indent_y
         black_x = -1* self.canvas_size_x  * indent_x
@@ -248,4 +252,30 @@ class MatplotlibGUI(UI):
     def show_canvas(self):
         if self.ax is None:
             self._ensure_ax()
-        plt.show()
+        plt.draw()
+        plt.pause(0.001)
+
+    def wait_for_user_input(self,player_color):
+        print(f"----- player {player_color} -----")
+        start_move  = input("Enter q, r, (s) of start: ")
+        end_move = input("Enter q, r, (s) of end: ")
+        piece = input("Name of piece: ")
+
+        if player_color == "white":
+            piece_bank = self.game.piece_bank_white
+        elif player_color == "black":
+            piece_bank = self.game.piece_bank_black
+        else:
+            raise ValueError(f"Invalid player color: {player_color}")
+
+        #This is piece that is in the piece bank
+        if start_move == "bank":
+            start_coord = None
+        else:
+            entered_start_coord = [int(elem.strip()) for elem in start_move.split(",")]
+            start_coord = GridCoordinates(entered_start_coord[0], entered_start_coord[1])
+        entered_end_coord = [int(elem.strip()) for elem in end_move.split(",")]
+        end_coord = GridCoordinates(entered_end_coord[0], entered_end_coord[1])
+        piece_object = piece_bank[piece]
+
+        return Move(start_coord, end_coord, piece_object)
