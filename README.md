@@ -2,6 +2,6 @@
 
 WIP: This is my Python implementation of Hive board game (https://en.wikipedia.org/wiki/Hive_(game)). 
 
-The snapshot of the first version of a very simple graphics is shown bellow.
+The snapshot of the first version of a very simple game display is shown below.
 
 <img src="https://github.com/otheiner/hive_game/blob/main/assets/game_snapshot.png" width="550">
