@@ -8,6 +8,12 @@ class Player:
     def __init__(self, color, ui):
         self.color = color
         self.ui = ui
+        if color == Player.PlayerColor.WHITE:
+            self.piece_bank = ui.game.piece_bank_white
+        elif color == Player.PlayerColor.BLACK:
+            self.piece_bank = ui.game.piece_bank_black
+        else:
+            raise ValueError(f"Invalid player color: {color}.")
 
     def get_move(self, game):
         raise NotImplementedError()

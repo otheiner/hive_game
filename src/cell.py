@@ -38,9 +38,11 @@ class Cell():
     #     return self.q, self.r, self.s
 
     def add_piece(self, added_piece):
+        added_piece.coord = self.coord
         self.pieces.append(added_piece)
 
     def remove_piece(self, removed_piece):
+        removed_piece.coord = None
         self.pieces.remove(removed_piece)
 
     def get_pieces(self):

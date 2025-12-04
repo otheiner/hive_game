@@ -7,7 +7,7 @@ from ui import MatplotlibGUI
 
 
 def main():
-    game = Game(7)
+    game = Game(2)
     ui = MatplotlibGUI(game,1.3, 40, 40)
     players = [HumanPlayer(Player.PlayerColor.WHITE,ui), HumanPlayer(Player.PlayerColor.BLACK,ui)]
     current_player_index = 0

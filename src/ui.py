@@ -9,6 +9,8 @@ import cell as cell_lib
 import board as board_lib
 import piece as piece_lib
 import texture as texture_lib
+from src.player import Player
+
 #from player import Player, HumanPlayer, Move
 importlib.reload(cell_lib)
 importlib.reload(piece_lib)
@@ -276,26 +278,30 @@ class MatplotlibGUI(UI):
         self.ax.axis('off')
         return
 
-    def wait_for_user_input(self,player_color):
+    # TODO This should maybe only process input but shouldn't do the logis about occupied cells,...
+    # TODO Think about idea above because the same checks will have to be done for mouse input
+    # TODO just type of input will be different but logic will be the same.
+    def wait_for_user_input(self, player_color):
         print(f"----- Player {player_color}, round {self.game.round_counter} -----")
-        piece_name = input("Enter name of piece (or 'q' to end game): ")
-        if piece_name == 'q':
-            return None
-        start_move  = input("Enter q r (s) of start (or 'q' to end game): ")
-        if start_move == 'q':
-            return None
-        end_move = input("Enter q r (s) of end (or 'q' to end game): ")
-        if end_move == 'q':
-            return None
 
-        if player_color == "white":
+        if player_color == Player.PlayerColor.WHITE:
             piece_bank = self.game.piece_bank_white
-        elif player_color == "black":
+        elif player_color == Player.PlayerColor.BLACK:
             piece_bank = self.game.piece_bank_black
         else:
             raise ValueError(f"Invalid player color: {player_color}")
+        print(f" piece bank: {piece_bank}")
 
-        #Process start coordinates input
+        # Enter piece and coordinates to be able to see possible placements
+        piece_name = input("Enter name of piece \n(or 'quit' to end game): ")
+        if piece_name == 'quit':
+            return None
+        start_move = input("Enter q r (s) of start \n(or 'quit' to end game): ")
+        if start_move == 'quit':
+            return None
+
+        # Process start coordinates input
+        # Check if we are picking piece from board or from bank
         if start_move.strip() == "bank":
             start_coord = None
         else:
@@ -313,7 +319,49 @@ class MatplotlibGUI(UI):
                 print(f"Staring coordinates need to have two components")
                 return self.wait_for_user_input(player_color)
 
-        #Process end coordinates input
+        # Process piece input
+        # Check if piece is on given coordinates on top of the piece stack
+        if start_coord is not None:
+            top_piece = self.game.cells[(start_coord.q, start_coord.r, start_coord.s)].get_top_piece()
+            if top_piece is not None:
+                if (top_piece.type == piece_name) and (top_piece.color == player_color):
+                    # TODO I think there is problem with pointers
+                    selected_piece = top_piece
+                    print(f"test: {top_piece.type} {piece_name} {top_piece.color}")
+                else:
+                    print(f"Piece {piece_name} is not at starting coordinates. Enter move again.")
+                    return self.wait_for_user_input(player_color)
+            else:
+                print("There is no piece on given coordinates. Enter move again.")
+                return self.wait_for_user_input(player_color)
+        # If piece is not on board check if it is in piece bank
+        else:
+            selected_piece = None
+            for piece in piece_bank.values():
+                if piece.type == piece_name and piece.coord is None:
+                    selected_piece = piece
+            if selected_piece is None:
+                print(f"Piece {piece_name} not in the bank. Enter the move again.")
+                return self.wait_for_user_input(player_color)
+
+        # Highlight possible moves before picking where to go
+        highlighted_cells = selected_piece.get_possible_moves(self.game)
+        self.draw_board(show_grid=True, show_coords=True)
+        self.draw_cells(highlighted_cells, Texture.TextureType.HIGHLIGHTED_CELL)
+        self.draw_stats()
+        self.draw_piece_banks()
+        self.show_canvas()
+
+        # Process end coordinates input
+        end_move = input("Enter q r (s) of end \n(or 'a' to abandon this piece, or 'quit' to end game): ")
+        if end_move == 'quit':
+            return None
+        if end_move == 'a':
+            # Show board but don't highlight any cells
+            self.draw_board(show_grid=True, show_coords=True)
+            self.draw_stats()
+            self.draw_piece_banks()
+            self.show_canvas()
         entered_end_coord = []
         for coord in end_move.split(" "):
             coord = coord.strip()
@@ -328,25 +376,4 @@ class MatplotlibGUI(UI):
             print(f"Destination coordinates need to have two components")
             return self.wait_for_user_input(player_color)
 
-        #Process piece input
-        #Check if piece is on given coordinates on top of the piece stack
-        if start_coord is not None:
-            top_piece = self.game.cells[(start_coord.q, start_coord.r, start_coord.s)].get_top_piece()
-            if top_piece is not None:
-                if (top_piece.type == piece_name) and (top_piece.color == player_color):
-                    #TODO I think there is problem with pointers
-                    print(f"test: {top_piece.type} {piece_name} {top_piece.color}")
-                    return Move(start_coord, end_coord, top_piece)
-                else:
-                    print(f"Piece {piece_name} is not at starting coordinates. Enter move again.")
-                    return self.wait_for_user_input(player_color)
-            else:
-                print("There is no piece on given coordinates. Enter move again.")
-                return self.wait_for_user_input(player_color)
-        #If piece is not on board check if it is in piece bank
-        else:
-            for piece in piece_bank.values():
-                if piece.type == piece_name and piece.coord is None:
-                    return Move(start_coord, end_coord, piece)
-            print(f"Piece {piece_name} not in the bank. Enter the move again.")
-            return self.wait_for_user_input(player_color)
+        return Move(start_coord, end_coord, selected_piece)

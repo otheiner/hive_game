@@ -1,6 +1,9 @@
 import importlib
 import board as board_lib
 import piece as piece_lib
+from src.cell import GridCoordinates
+from src.move import Move
+
 importlib.reload(board_lib)
 importlib.reload(piece_lib)
 from board import Board
@@ -13,6 +16,8 @@ class Game(Board):
         self.winning_state = False
         #TODO Write checking for winning state
         self.white_turn = True
+        self.white_queen_placed = False
+        self.black_queen_placed = False
         self.round_counter = 1
         self.piece_bank_white = {"queen" : Queen(Piece.PieceColour.WHITE),
                                  "spider1" : Spider(Piece.PieceColour.WHITE),
@@ -46,14 +51,22 @@ class Game(Board):
         for cell in cells:
             cell.print_cell()
 
-    def get_neighbours(self, coord):
-        neighbours = [self.cells[(coord.q + 1, coord.r - 1, coord.s    )],
-                      self.cells[(coord.q + 1, coord.r    , coord.s - 1)],
-                      self.cells[(coord.q - 1, coord.r + 1, coord.s    )],
-                      self.cells[(coord.q - 1, coord.r    , coord.s + 1)],
-                      self.cells[(coord.q    , coord.r + 1, coord.s - 1)],
-                      self.cells[(coord.q    , coord.r - 1, coord.s + 1)]]
-        return neighbours
+    def get_piece_bank(self, piece_color):
+        if piece_color == Piece.PieceColour.BLACK:
+            return self.piece_bank_black
+        elif piece_color == Piece.PieceColour.WHITE:
+            return self.piece_bank_white
+        else:
+            raise ValueError(f"Piece has some weird colour - should be BLACK or WHITE")
+
+    def get_neighbors(self, coord):
+        neighbors = []
+        for dq, dr, ds in Board.HEX_DIRECTIONS:
+            key = (coord.q + dq, coord.r + dr, coord.s + ds)
+            cell = self.cells.get(key)
+            if cell is not None:
+                neighbors.append(cell)
+        return neighbors
 
     def update_stats(self):
         self.white_turn = not self.white_turn
@@ -64,19 +77,20 @@ class Game(Board):
         occupied_cells = []
         for cell in self.cells.values():
             if cell.has_piece():
+                #TODO is this the fix?
                 occupied_cells.append(cell)
         return occupied_cells
 
     def get_occupied_neighbours(self, coord):
-        neighbours = self.get_neighbours(coord)
+        neighbours = self.get_neighbors(coord)
         occupied_neighbours = []
         for neighbour in neighbours:
             if neighbour.has_piece():
                 occupied_neighbours.append(neighbour)
         return occupied_neighbours
 
-    def get_empty_neighbours(self, coord):
-        neighbours = self.get_neighbours(coord)
+    def get_empty_neighbors(self, coord):
+        neighbours = self.get_neighbors(coord)
         empty_neighbours = []
         for neighbour in neighbours:
             if not neighbour.has_piece():
@@ -105,7 +119,7 @@ class Game(Board):
         outer_border = []
         occupied_cells = self.get_occupied_cells()
         for occupied_cell in occupied_cells:
-            neighbours = self.get_neighbours(occupied_cell.coord)
+            neighbours = self.get_neighbors(occupied_cell.coord)
             for neighbour in neighbours:
                 if not neighbour.has_piece():
                     not_in_outer_border = True
@@ -116,27 +130,69 @@ class Game(Board):
                         outer_border.append(neighbour)
         return outer_border
 
+    #TODO Implement 'freedom to move' rule here
     def get_playable_border(self, coord):
         playable_border = []
         occupied_cells = self.get_occupied_cells()
-        occupied_cells.remove(self.get_cell(coord))
+        if not coord is None:
+            occupied_cells.remove(self.get_cell(coord))
+        print(f"Occupied cells: {occupied_cells}")
         for occupied_cell in occupied_cells:
-            neighbours = self.get_neighbours(occupied_cell.coord)
-            for neighbour in neighbours:
+            neighbors = self.get_neighbors(occupied_cell.coord)
+            print(f"Neighbouring cell: {neighbors}")
+            for neighbour in neighbors:
                 if not neighbour.has_piece():
+                    #FIXME This won't work for hole in the island - check if each cell in  the border has
+                    # more than 1 cell connected to it - this should be freedom to move rule
                     not_in_outer_border = True
                     for cell in playable_border:
-                        if cell == neighbour:
+                        if cell.coord == neighbour.coord:
                             not_in_outer_border = False
                     if not_in_outer_border:
                         playable_border.append(neighbour)
+
         return playable_border
 
-    def place_piece(self,coord, piece):
+    def has_neighbours_of_same_color(self, coord, piece):
+        neighbours = self.get_occupied_neighbours(coord)
+        # This should happen only during the first move
+        # if len(neighbours) == 0:
+        #     return True
+        for neighbour in neighbours:
+            if neighbour.get_top_piece().color != piece.color:
+                return False
+        return True
+
+    def get_possible_placements(self, piece):
+        # First move
+        if self.white_turn and (self.round_counter == 1):
+            return [self.get_cell(GridCoordinates(0, 0, 0))]
+        # Second move
+        elif (not self.white_turn) and (self.round_counter == 1):
+            return self.get_neighbors(GridCoordinates(0, 0, 0))
+        # Any other move
+        else:
+            possible_placements = []
+            piece_color = piece.color
+            playable_border = self.get_playable_border(None)
+            for cell in playable_border:
+                occupied_neighbours = self.get_occupied_neighbours(cell.coord)
+                include_cell = True
+                for occupied_neighbour in occupied_neighbours:
+                    if occupied_neighbour.get_top_piece().color != piece_color:
+                        include_cell = False
+                if include_cell:
+                    possible_placements.append(cell)
+            return possible_placements
+
+    def is_placement_legal(self,coord, piece):
         if piece.coord is not None:
             print(f"Piece {piece} is already on the board.")
             return False
-        board_cell = self.cells[(coord.q, coord.r, coord.s)]
+        board_cell = self.get_cell(coord)
+        if board_cell is None:
+            print(f"Coordinates {coord} are not on the board.")
+            return False
         outer_border = self.get_outer_border()
         #If not first move
         if len(outer_border) !=0:
@@ -144,98 +200,118 @@ class Game(Board):
                 print(self.get_outer_border())
                 print(f"Cannot place {piece} at this position because it would create separate island.")
                 return False
-        if not board_cell.has_piece():
-            board_cell.add_piece(piece)
-            piece.coord = board_cell.coord
-            self.update_stats()
-            print(f"Piece {piece} is now on the board at {coord}.")
-            return True
-        else:
-            print(f"Piece {piece.type} can be place only on empty cell. Cell {coord} is occupied")
+        #If cell empty
+        if board_cell.has_piece():
+            print(f"Piece {piece.type} can be placed only on empty cell. Cell {coord} is occupied")
             return False
+        #If cell has no neighbours of other colour
+        if (not self.has_neighbours_of_same_color(coord, piece)) and (self.round_counter != 1):
+            print(f"Can place piece only at cells that don't touch other player's pieces")
+            return False
+        #TODO Check if it is 3 or 4
+        #Queen hasn't been placed until round 4
+        if (piece.color == Piece.PieceColour.WHITE) and (not self.white_queen_placed) and (self.round_counter == 4):
+            print(f"Queen has to be placed in first four moves. Place queen.")
+            return False
+        #TODO Check if it is 3 or 4
+        #Queen hasn't been placed until round 4
+        if (piece.color == Piece.PieceColour.BLACK) and (not self.black_queen_placed) and (self.round_counter == 4):
+            print(f"Queen has to be placed in first four moves. Place queen.")
+            return False
+        return True
+
+    # In case make copy of a game object, and we want to be able to retrieve
+    # the correct piece and cells in the new game object
+    @staticmethod
+    def copy_move_object(game_copy, move):
+        piece = None
+        if move.current_coord is None:
+            piece_bank = game_copy.get_piece_bank(move.piece.color)
+            selected_piece = None
+            for p in piece_bank.values():
+                if p.type == move.piece.type and p.coord is None:
+                    selected_piece = p
+            if selected_piece is None:
+                print(f"Piece {move.piece.type} not in the bank. Enter the move again.")
+                return False
+            piece = selected_piece
+        # Locate piece on the board (don't do checks if it is on top - this is done later)
+        else:
+            for p in game_copy.get_cell(move.current_coord).get_pieces():
+                if p.type == move.piece.type:
+                    piece = p
+        return Move(move.current_coord, move.final_coord, piece)
 
     def is_move_legal(self, move):
-        #TODO Implement validation of initial piece placement and beginning of the game
-        move = copy.deepcopy(move)
         game_copy = copy.deepcopy(self)
+        move = self.copy_move_object(game_copy, move)
+
+        #If current coord is none, take piece from the bank and try placing it
         if move.current_coord is None:
-            # Let's now do the test with copy of the game
-            return game_copy.place_piece(move.final_coord, move.piece)
+            return game_copy.is_placement_legal(move.final_coord, move.piece)
         else:
             #Check if the piece is on the top of the cell
-            piece = move.piece
+            top_piece = game_copy.get_cell(move.current_coord).get_top_piece()
             current_cell = self.get_cell(move.current_coord)
-            if current_cell.get_top_piece() != piece:
-                print(f"Warning: {piece.type} is not at cell {current_cell.coord} or "
+            if current_cell is None:
+                print(f"Coordinates {move.current_coord} are not on the board.")
+                return False
+            if top_piece != move.piece:
+                print(f"Warning: {move.piece.type} is not at cell {current_cell.coord} or "
                       f"is not at the top of the cell.")
                 return False
 
             # Let's now do the test with copy of the game
             new_cell = game_copy.get_cell(move.final_coord)
+            if new_cell is None:
+                print(f"Coordinates {move.final_coord} are not on the board.")
+                return False
             #Check if the move follows movement rules of the piece
-            if not new_cell in piece.get_possible_moves(move.current_coord, game_copy):
-                print(f"Warning: {piece.type} at cell {move.current_coord} cannot move to cell "
+            if not new_cell in move.piece.get_possible_moves(game_copy):
+                print(f"Warning: {move.piece.type} at cell {move.current_coord} cannot move to cell "
                       f"{move.final_coord}. This would violate movement pattern.")
                 return False
 
             #Check if movement doesn't result in disconnected island
-            game_copy.move_piece(move.current_coord, move.final_coord, piece)
+            game_copy._move_piece(move)
             if not game_copy.is_valid_state():
-                print(f"Warning: {piece.type} at cell {move.current_coord} cannot move to cell "
+                print(f"Warning: {move.piece.type} at cell {move.current_coord} cannot move to cell "
                       f"{move.final_coord}. This would result in disconnect island.")
                 return False
 
             #By removing the piece completely we check if the island doesn't get disconnected during the move
             #We already moved the piece, so we remove it from new location
-            game_copy.remove_piece(move.final_coord, piece)
+            new_cell.remove_piece(move.piece)
             if not game_copy.is_valid_state():
-                print(f"Warning: {piece.type} at cell {move.current_coord} cannot move to cell "
+                print(f"Warning: {move.piece.type} at cell {move.current_coord} cannot move to cell "
                       f"{move.final_coord}. This would result in disconnect island.")
                 return False
             else:
                 return True
 
-    def remove_piece(self, coord, piece):
-        current_board_cell = self.get_cell(coord)
-        if current_board_cell.get_top_piece().type != piece.type:
-            print(f"Top piece {current_board_cell.get_top_piece()}, desired piece {piece}.")
-            print("Can't remove piece: Cell doesn't contain given piece, or the piece is not on top.")
+    # This is only low level function - to move pieces use make_move()
+    def _move_piece(self, move):
+        current_cell = self.get_cell(move.current_coord)
+        new_cell = self.get_cell(move.final_coord)
+        #Placing piece on the board
+        if (current_cell is None) and not (new_cell is None):
+            new_cell.add_piece(move.piece)
+            self.update_stats()
+            print(f"Piece {move.piece} is now on the board at {move.final_coord}.")
+            return True
+        #Making move
+        elif not (current_cell is None) and not (new_cell is None):
+            current_cell.remove_piece(move.piece)
+            new_cell.add_piece(move.piece)
+            self.update_stats()
+            return True
+        else:
+            print(f"You are trying to do {move} and that is not possible. Coordinates not on board.")
             return False
-        current_board_cell.remove_piece(current_board_cell.get_top_piece())
-        piece.coord = None
-        return True
-
-    #TODO Make sure that this works with pieces that can move on top of others
-    def move_piece(self, current_coord, new_coord, piece):
-        #TODO Check that the move is legal
-        current_cell = self.get_cell(current_coord)
-        new_cell = self.get_cell(new_coord)
-        if current_cell.get_top_piece() != piece:
-            print(f"ERROR: Can't move. Top piece is {current_cell.get_top_piece()}, desired piece is {piece}.")
-            return False
-        if ((new_cell.get_top_piece() is not None) or
-            (piece.type != Piece.PieceType.BEETLE) or
-            (piece.type != Piece.PieceType.MOSQUITTO)):
-            print("ERROR: Invalid move. Target cell is not empty.")
-            return False
-        print(f"Moving {piece} from {current_coord} to {new_coord}.")
-        current_cell.remove_piece(piece)
-        new_cell.add_piece(piece)
-        piece.coord = new_cell.coord
-        self.update_stats()
-        return True
 
     def make_move(self, move):
-        start_position = move.current_coord
-        end_position = move.final_coord
-        piece = move.piece
-
-        #TODO This might be written better, I think
         if self.is_move_legal(move):
-            if move.current_coord is None:
-                return self.place_piece(end_position, piece)
-            else:
-                return self.move_piece(start_position, end_position, piece)
+            return self._move_piece(move)
         else:
-            print(f"Cannot make move {move}.")
+            print(f"Cannot make move {move}. Illegal move (or poorly implemented rules haha).")
             return False

@@ -3,6 +3,14 @@ from cell import Cell, GridCoordinates
 from piece import Piece
 
 class Board:
+    HEX_DIRECTIONS = [
+        (+1, -1, 0),
+        (+1, 0, -1),
+        (-1, +1, 0),
+        (-1, 0, +1),
+        (0, +1, -1),
+        (0, -1, +1)]
+
     #TODO Maybe it is possible to represent board using sparse matrices
     def __init__(self, halfwidth):
         self.halfwidth = halfwidth
@@ -42,7 +50,10 @@ class Board:
         return coord
 
     def get_cell(self, coord):
-        try:
-            return self.cells[(coord.q, coord.r, coord.s)]
-        except KeyError:
-            raise ValueError(f"Cell is not on the board: q={coord.q}, r={coord.r}, s={coord.s}")
+        if coord is None:
+            return None
+        else:
+            cell = self.cells.get((coord.q, coord.r, coord.s))
+            if cell is None:
+                print(f"Coordinates {coord} are not on the board.")
+            return cell
