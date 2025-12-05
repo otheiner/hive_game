@@ -3,13 +3,14 @@ from cell import Cell, GridCoordinates
 from piece import Piece
 
 class Board:
+    # They are ordered in mathematically positive sense - starting on "x-axis"
     HEX_DIRECTIONS = [
-        (+1, -1, 0),
         (+1, 0, -1),
+        (0, +1, -1),
         (-1, +1, 0),
         (-1, 0, +1),
-        (0, +1, -1),
-        (0, -1, +1)]
+        (0, -1, +1),
+        (+1, -1, 0)]
 
     #TODO Maybe it is possible to represent board using sparse matrices
     def __init__(self, halfwidth):

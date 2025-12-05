@@ -61,6 +61,8 @@ class Game(Board):
 
     def get_neighbors(self, coord):
         neighbors = []
+        if coord is None:
+            return neighbors
         for dq, dr, ds in Board.HEX_DIRECTIONS:
             key = (coord.q + dq, coord.r + dr, coord.s + ds)
             cell = self.cells.get(key)
@@ -77,13 +79,14 @@ class Game(Board):
         occupied_cells = []
         for cell in self.cells.values():
             if cell.has_piece():
-                #TODO is this the fix?
                 occupied_cells.append(cell)
         return occupied_cells
 
-    def get_occupied_neighbours(self, coord):
+    def get_occupied_neighbors(self, coord):
         neighbours = self.get_neighbors(coord)
         occupied_neighbours = []
+        if coord is None:
+            return occupied_neighbours
         for neighbour in neighbours:
             if neighbour.has_piece():
                 occupied_neighbours.append(neighbour)
@@ -92,19 +95,36 @@ class Game(Board):
     def get_empty_neighbors(self, coord):
         neighbours = self.get_neighbors(coord)
         empty_neighbours = []
+        if coord is None:
+            return empty_neighbours
         for neighbour in neighbours:
             if not neighbour.has_piece():
                 empty_neighbours.append(neighbour)
         return empty_neighbours
 
-    #TODO Maybe problem with different pointers/objects that is being worked with and that is inputted
     def get_connected_cells(self, start_coord, visited=None):
+        if start_coord is None:
+            return []
         if visited is None:
             visited = set()
         visited.add(self.get_cell(start_coord))
-        for neighbour in self.get_occupied_neighbours(start_coord):
+        for neighbour in self.get_occupied_neighbors(start_coord):
             if neighbour not in visited:
                 self.get_connected_cells(neighbour.coord, visited)
+        return visited
+
+    # Returns array of tuples (cell in island, distance_from_origin)
+    def get_connected_cells_with_distances(self, start_coord, visited=None, origin_coord=None):
+        if start_coord is None:
+            return {}
+        if visited is None:
+            origin_coord = start_coord
+            visited = {}
+        distance = GridCoordinates.distance(start_coord, origin_coord)
+        visited[self.get_cell(start_coord)] = distance
+        for neighbour in self.get_occupied_neighbors(start_coord):
+            if neighbour not in visited:
+                self.get_connected_cells_with_distances(neighbour.coord, visited, origin_coord)
         return visited
 
     def is_valid_state(self):
@@ -115,46 +135,127 @@ class Game(Board):
         else:
             return False
 
-    def get_outer_border(self):
-        outer_border = []
-        occupied_cells = self.get_occupied_cells()
-        for occupied_cell in occupied_cells:
-            neighbours = self.get_neighbors(occupied_cell.coord)
-            for neighbour in neighbours:
-                if not neighbour.has_piece():
-                    not_in_outer_border = True
-                    for cell in outer_border:
-                        if cell == neighbour:
-                            not_in_outer_border = False
-                    if not_in_outer_border:
-                        outer_border.append(neighbour)
-        return outer_border
+    # Checks freedom to move only if two cells are neighboring, if they are not - returns false
+    def freedom_to_move(self, coord_from, coord_to):
+        cell_from = self.get_cell(coord_from)
+        cell_to = self.get_cell(coord_to)
+        direction_between_cells = (cell_from.coord.q - cell_to.coord.q,
+                                   cell_from.coord.r - cell_to.coord.r,
+                                   cell_from.coord.s - cell_to.coord.s)
 
-    #TODO Implement 'freedom to move' rule here
+        # Piece is in bank - it can move to any cell (check if the cell is not done here)
+        if coord_from is None:
+            return True
+        # Moving back to bank is not possible
+        if coord_to is None:
+            return False
+
+        if direction_between_cells == Board.HEX_DIRECTIONS[0]:
+            bottleneck_left = Board.HEX_DIRECTIONS[1]
+            bottleneck_right = Board.HEX_DIRECTIONS[5]
+        elif direction_between_cells == Board.HEX_DIRECTIONS[1]:
+            bottleneck_left = Board.HEX_DIRECTIONS[2]
+            bottleneck_right = Board.HEX_DIRECTIONS[0]
+        elif direction_between_cells == Board.HEX_DIRECTIONS[2]:
+            bottleneck_left = Board.HEX_DIRECTIONS[3]
+            bottleneck_right = Board.HEX_DIRECTIONS[1]
+        elif direction_between_cells == Board.HEX_DIRECTIONS[3]:
+            bottleneck_left = Board.HEX_DIRECTIONS[2]
+            bottleneck_right = Board.HEX_DIRECTIONS[4]
+        elif direction_between_cells == Board.HEX_DIRECTIONS[4]:
+            bottleneck_left = Board.HEX_DIRECTIONS[3]
+            bottleneck_right = Board.HEX_DIRECTIONS[5]
+        elif direction_between_cells == Board.HEX_DIRECTIONS[5]:
+            bottleneck_left = Board.HEX_DIRECTIONS[0]
+            bottleneck_right = Board.HEX_DIRECTIONS[4]
+        # Cells are not neighboring
+        else:
+            return False
+
+        bottleneck_left_cell = self.get_cell(GridCoordinates(cell_from.coord.q + bottleneck_left[0],
+                                                             cell_from.coord.r + bottleneck_left[1],
+                                                             cell_from.coord.s + bottleneck_left[2]))
+        bottleneck_right_cell = self.get_cell(GridCoordinates(cell_to.coord.q + bottleneck_right[0],
+                                                              cell_to.coord.r + bottleneck_right[1],
+                                                              cell_to.coord.s + bottleneck_right[2]))
+
+        if (not bottleneck_left_cell.has_piece()) or (not bottleneck_right_cell.has_piece()):
+            return True
+        else:
+            return False
+
+    def get_outer_border(self, require_freedom_to_move = False):
+        # This can happen only before any piece is placed
+        if len(self.get_occupied_cells()) == 0:
+            return []
+        # Any move except for the very first move of white player
+        else:
+            # Let's pick cell on the border of island. If we pick the furthest cell with piece from
+            # reference cell, this cell then has to be on the outer border of island.
+            reference_cell = self.get_occupied_cells()[0]
+            connected_cells_dict = self.get_connected_cells_with_distances(reference_cell.coord)
+            furthest_distance = 0
+            furthest_cell = reference_cell
+            for connected_cell in connected_cells_dict:
+                if connected_cells_dict[connected_cell] > furthest_distance:
+                    furthest_distance = connected_cells_dict[connected_cell]
+                    furthest_cell = connected_cell
+
+            # Let's now use furthest_cell, and get its any empty neighbor - this neighbor is then on
+            # outer border. We can then use flood fill from this neighbor to detect rest of the cells
+            # on the outer border using flood fill with the condition.
+            def flood_fill_outer_border(start_coord, visited=None):
+                if visited is None:
+                    visited = set()
+                visited.add(self.get_cell(start_coord))
+                for empty_neighbor in self.get_empty_neighbors(start_coord):
+                    if len(self.get_occupied_neighbors(empty_neighbor.coord)) > 0 and empty_neighbor not in visited:
+                        flood_fill_outer_border(empty_neighbor.coord, visited)
+                return visited
+
+            def flood_fill_freedom_to_move_border(start_coord, visited=None):
+                if visited is None:
+                    visited = set()
+                visited.add(self.get_cell(start_coord))
+                for empty_neighbor in self.get_empty_neighbors(start_coord):
+                    if (len(self.get_occupied_neighbors(empty_neighbor.coord)) > 0 and
+                        self.freedom_to_move(start_coord, empty_neighbor.coord) and
+                        empty_neighbor not in visited):
+                        flood_fill_freedom_to_move_border(empty_neighbor.coord, visited)
+                return visited
+
+            empty_cell_on_outer_border = self.get_empty_neighbors(furthest_cell.coord)[0]
+            if empty_cell_on_outer_border is None:
+                raise KeyError(f"Game reached end of active board - board is too small for this game.")
+            if require_freedom_to_move:
+                return flood_fill_freedom_to_move_border(empty_cell_on_outer_border.coord)
+            else:
+                return flood_fill_outer_border(empty_cell_on_outer_border.coord)
+
     def get_playable_border(self, coord):
-        playable_border = []
-        occupied_cells = self.get_occupied_cells()
-        if not coord is None:
-            occupied_cells.remove(self.get_cell(coord))
-        print(f"Occupied cells: {occupied_cells}")
-        for occupied_cell in occupied_cells:
-            neighbors = self.get_neighbors(occupied_cell.coord)
-            print(f"Neighbouring cell: {neighbors}")
-            for neighbour in neighbors:
-                if not neighbour.has_piece():
-                    #FIXME This won't work for hole in the island - check if each cell in  the border has
-                    # more than 1 cell connected to it - this should be freedom to move rule
-                    not_in_outer_border = True
-                    for cell in playable_border:
-                        if cell.coord == neighbour.coord:
-                            not_in_outer_border = False
-                    if not_in_outer_border:
-                        playable_border.append(neighbour)
+        playable_border = self.get_outer_border(require_freedom_to_move=True)
+        empty_neighbors = self.get_empty_neighbors(coord)
+        border_reachable = False
+        # Playable border for piece in bank is outer border with freedom to move rule
+        if coord is None:
+            return playable_border
+        for neighbor in empty_neighbors:
+            if neighbor in playable_border:
+                # Remove cells that would end up having no occupied neighbor after moving the piece
+                if len(self.get_occupied_neighbors(neighbor.coord)) == 1:
+                    playable_border.remove(neighbor)
+                # Check that we can reach playable border and not violate freedom to move rule
+                else:
+                    if self.freedom_to_move(coord, neighbor.coord):
+                        border_reachable = True
 
-        return playable_border
+        if border_reachable:
+            return playable_border
+        else:
+            return []
 
     def has_neighbours_of_same_color(self, coord, piece):
-        neighbours = self.get_occupied_neighbours(coord)
+        neighbours = self.get_occupied_neighbors(coord)
         # This should happen only during the first move
         # if len(neighbours) == 0:
         #     return True
@@ -176,7 +277,7 @@ class Game(Board):
             piece_color = piece.color
             playable_border = self.get_playable_border(None)
             for cell in playable_border:
-                occupied_neighbours = self.get_occupied_neighbours(cell.coord)
+                occupied_neighbours = self.get_occupied_neighbors(cell.coord)
                 include_cell = True
                 for occupied_neighbour in occupied_neighbours:
                     if occupied_neighbour.get_top_piece().color != piece_color:
@@ -309,9 +410,39 @@ class Game(Board):
             print(f"You are trying to do {move} and that is not possible. Coordinates not on board.")
             return False
 
+    def check_win(self):
+        white_queen_coord = self.piece_bank_white["queen"].coord
+        black_queen_coord = self.piece_bank_black["queen"].coord
+        white_winner = False
+        black_winner = False
+        if self.get_occupied_neighbors(white_queen_coord) == 6:
+            self.winning_state = True
+            black_winner = True
+        if self.get_occupied_neighbors(black_queen_coord) == 6:
+            self.winning_state = True
+            white_winner = True
+
+        # White is winner
+        if white_winner and not black_winner:
+            return "White wins!"
+        # Black is winner
+        if white_winner and black_winner:
+            return "Black wins!"
+        # This would be weird situation, but it would be a draw. Both queens have 6 neighbours.
+        if white_winner and black_winner:
+            return "How did you manage to do this?! This is draw!"
+
+        return False
+
+
+
     def make_move(self, move):
         if self.is_move_legal(move):
-            return self._move_piece(move)
+            move_success = self._move_piece(move)
+            message = self.check_win()
+            if self.winning_state:
+                print(f"{message}")
+            return move_success
         else:
             print(f"Cannot make move {move}. Illegal move (or poorly implemented rules haha).")
             return False

@@ -20,6 +20,12 @@ class GridCoordinates:
     def __repr__(self):
         return f"coord({self.q}, {self.r}, {self.s})"
 
+    @staticmethod
+    def distance(coord1, coord2):
+        return ((abs(coord1.q - coord2.q) +
+                 abs(coord1.r - coord2.r) +
+                 abs(coord1.s - coord2.s)) / 2)
+
 class Cell():
     def __init__(self, coord):
         self.coord = coord
@@ -30,6 +36,9 @@ class Cell():
 
     def __hash__(self):
         return hash(self.coord)
+
+    def __repr__(self):
+        return f"Cell {hex(id(self))} coord({self.coord.q}, {self.coord.r}, {self.coord.s})"
 
     def print_cell(self):
         print(f"({self.coord,q}, {self.coord.r}, {self.coord.s}), pieces: {self.pieces}")

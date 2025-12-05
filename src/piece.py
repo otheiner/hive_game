@@ -73,26 +73,17 @@ class Queen(Piece):
         super().__init__(self.PieceType.QUEEN, colour)
 
     def get_possible_moves(self, game_state):
-        #TODO implement me (don't forget sliding rule)
         coord = self.coord
         if coord is None:
             return game_state.get_possible_placements(self)
         else:
-            outer_border_without_queen = game_state.get_playable_border(self.coord)
-            print(f"Outer border without queen: {outer_border_without_queen}")
-            # If queen is not on outer border, it cannot move (freedom to move rule)
-            if not game_state.get_cell(coord) in outer_border_without_queen:
-                print("test1")
-                return []
-            # If queen can move return intersection of queen neighbours with playable border
-            else:
-                print("test2")
-                possible_moves = []
-                queen_neighbours = game_state.get_empty_neighbors(coord)
-                for neighbour in queen_neighbours:
-                    if neighbour in outer_border_without_queen:
-                        possible_moves.append(neighbour)
-                return possible_moves
+            playable_border = game_state.get_playable_border(self.coord)
+            possible_moves = []
+            queen_cell = game_state.get_cell(coord)
+            for neighbor in game_state.get_neighbors(queen_cell.coord):
+                if neighbor in playable_border:
+                    possible_moves.append(neighbor)
+            return possible_moves
 
 class Spider(Piece):
     def __init__(self, colour):
