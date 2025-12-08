@@ -161,6 +161,9 @@ class MatplotlibGUI(UI):
         elif piece_texture == Texture.TextureType.WHITE_MOSQUITTO:
             piece_color = 'grey'
             fill_color = white_piece
+        elif piece_texture == Texture.TextureType.WHITE_PILLBUG:
+            piece_color = 'turquoise'
+            fill_color = white_piece
         elif piece_texture == Texture.TextureType.BLACK_QUEEN:
             piece_color = 'yellow'
             fill_color = black_piece
@@ -181,6 +184,9 @@ class MatplotlibGUI(UI):
             fill_color = black_piece
         elif piece_texture == Texture.TextureType.BLACK_MOSQUITTO:
             piece_color = 'grey'
+            fill_color = black_piece
+        elif piece_texture == Texture.TextureType.BLACK_PILLBUG:
+            piece_color = 'turquoise'
             fill_color = black_piece
         else:
             print(f"Warning: {piece_texture} is unknown, or not implemented in this GUI. "
@@ -265,7 +271,7 @@ class MatplotlibGUI(UI):
         if self.ax is None:
             self._ensure_ax()
         plt.draw()
-        plt.pause(0.001)
+        plt.pause(0.1)
         return
 
     def clear_canvas(self):
@@ -327,7 +333,6 @@ class MatplotlibGUI(UI):
                 if (top_piece.type == piece_name) and (top_piece.color == player_color):
                     # TODO I think there is problem with pointers
                     selected_piece = top_piece
-                    print(f"test: {top_piece.type} {piece_name} {top_piece.color}")
                 else:
                     print(f"Piece {piece_name} is not at starting coordinates. Enter move again.")
                     return self.wait_for_user_input(player_color)
@@ -346,8 +351,10 @@ class MatplotlibGUI(UI):
 
         # Highlight possible moves before picking where to go
         highlighted_cells = selected_piece.get_possible_moves(self.game)
+        print(f"Highlighted cells: {highlighted_cells}")
+        print(f"Cel (1 0): {self.game.get_cell(GridCoordinates(1, 0))}")
         self.draw_board(show_grid=True, show_coords=True)
-        self.draw_cells(highlighted_cells, Texture.TextureType.HIGHLIGHTED_CELL)
+        self.draw_cells(highlighted_cells, cell_texture = Texture.TextureType.HIGHLIGHTED_CELL)
         self.draw_stats()
         self.draw_piece_banks()
         self.show_canvas()

@@ -14,7 +14,6 @@ class Game(Board):
     def __init__(self, halfwidth):
         super().__init__(halfwidth)
         self.winning_state = False
-        #TODO Write checking for winning state
         self.white_turn = True
         self.white_queen_placed = False
         self.black_queen_placed = False
@@ -50,6 +49,30 @@ class Game(Board):
     def print_cells(cells):
         for cell in cells:
             cell.print_cell()
+
+    def check_win(self):
+        white_queen_coord = self.piece_bank_white["queen"].coord
+        black_queen_coord = self.piece_bank_black["queen"].coord
+        white_winner = False
+        black_winner = False
+        if self.get_occupied_neighbors(white_queen_coord) == 6:
+            self.winning_state = True
+            black_winner = True
+        if self.get_occupied_neighbors(black_queen_coord) == 6:
+            self.winning_state = True
+            white_winner = True
+
+        # White is winner
+        if white_winner and not black_winner:
+            return "White wins!"
+        # Black is winner
+        if white_winner and black_winner:
+            return "Black wins!"
+        # This would be weird situation, but it would be a draw. Both queens have 6 neighbours.
+        if white_winner and black_winner:
+            return "How did you manage to do this?! This is draw!"
+
+        return False
 
     def get_piece_bank(self, piece_color):
         if piece_color == Piece.PieceColour.BLACK:
@@ -136,14 +159,14 @@ class Game(Board):
             return False
 
     # Checks freedom to move only if two cells are neighboring, if they are not - returns false
-    def freedom_to_move(self, coord_from, coord_to):
+    def freedom_to_move(self, coord_from, coord_to, level = 1):
         cell_from = self.get_cell(coord_from)
         cell_to = self.get_cell(coord_to)
         direction_between_cells = (cell_from.coord.q - cell_to.coord.q,
                                    cell_from.coord.r - cell_to.coord.r,
                                    cell_from.coord.s - cell_to.coord.s)
 
-        # Piece is in bank - it can move to any cell (check if the cell is not done here)
+        # Piece is in bank - it can move to any cell (check if the cell on the playable border is not done here)
         if coord_from is None:
             return True
         # Moving back to bank is not possible
@@ -179,7 +202,11 @@ class Game(Board):
                                                               cell_to.coord.r + bottleneck_right[1],
                                                               cell_to.coord.s + bottleneck_right[2]))
 
-        if (not bottleneck_left_cell.has_piece()) or (not bottleneck_right_cell.has_piece()):
+        # This can happen when we are at the edge of the game field
+        if (bottleneck_left_cell is None) or (bottleneck_right_cell is None):
+            return True
+        if (len(bottleneck_left_cell.get_pieces()) < level or
+            len(bottleneck_right_cell.get_pieces()) < level):
             return True
         else:
             return False
@@ -208,23 +235,30 @@ class Game(Board):
                 if visited is None:
                     visited = set()
                 visited.add(self.get_cell(start_coord))
-                for empty_neighbor in self.get_empty_neighbors(start_coord):
-                    if len(self.get_occupied_neighbors(empty_neighbor.coord)) > 0 and empty_neighbor not in visited:
-                        flood_fill_outer_border(empty_neighbor.coord, visited)
+                for empty_neighbour in self.get_empty_neighbors(start_coord):
+                    if len(self.get_occupied_neighbors(empty_neighbour.coord)) > 0 and empty_neighbour not in visited:
+                        flood_fill_outer_border(empty_neighbour.coord, visited)
                 return visited
 
             def flood_fill_freedom_to_move_border(start_coord, visited=None):
                 if visited is None:
                     visited = set()
                 visited.add(self.get_cell(start_coord))
-                for empty_neighbor in self.get_empty_neighbors(start_coord):
-                    if (len(self.get_occupied_neighbors(empty_neighbor.coord)) > 0 and
-                        self.freedom_to_move(start_coord, empty_neighbor.coord) and
-                        empty_neighbor not in visited):
-                        flood_fill_freedom_to_move_border(empty_neighbor.coord, visited)
+                for empty_neighbour in self.get_empty_neighbors(start_coord):
+                    if (len(self.get_occupied_neighbors(empty_neighbour.coord)) > 0 and
+                        self.freedom_to_move(start_coord, empty_neighbour.coord) and
+                        empty_neighbour not in visited):
+                        flood_fill_freedom_to_move_border(empty_neighbour.coord, visited)
                 return visited
 
+            # Pick the furthest empty neighbor of furthest cell - this should pick the cell on outer border
+            distance = 0
             empty_cell_on_outer_border = self.get_empty_neighbors(furthest_cell.coord)[0]
+            for empty_neighbor in self.get_empty_neighbors(furthest_cell.coord):
+                if GridCoordinates.distance(empty_neighbor.coord, furthest_cell.coord) > distance:
+                    distance = GridCoordinates.distance(empty_neighbor.coord, furthest_cell.coord)
+                    empty_cell_on_outer_border = empty_neighbor
+
             if empty_cell_on_outer_border is None:
                 raise KeyError(f"Game reached end of active board - board is too small for this game.")
             if require_freedom_to_move:
@@ -239,6 +273,8 @@ class Game(Board):
         # Playable border for piece in bank is outer border with freedom to move rule
         if coord is None:
             return playable_border
+        #FIXME This shouldn't be probably here and it should be managed by each piece by doing
+        # flood fill and checking if they can move to the next cell.
         for neighbor in empty_neighbors:
             if neighbor in playable_border:
                 # Remove cells that would end up having no occupied neighbor after moving the piece
@@ -309,14 +345,15 @@ class Game(Board):
         if (not self.has_neighbours_of_same_color(coord, piece)) and (self.round_counter != 1):
             print(f"Can place piece only at cells that don't touch other player's pieces")
             return False
-        #TODO Check if it is 3 or 4
         #Queen hasn't been placed until round 4
-        if (piece.color == Piece.PieceColour.WHITE) and (not self.white_queen_placed) and (self.round_counter == 4):
+        if ((piece.color == Piece.PieceColour.WHITE) and (piece.type != Piece.PieceType.QUEEN) and
+                (not self.white_queen_placed) and (self.round_counter == 4)):
             print(f"Queen has to be placed in first four moves. Place queen.")
             return False
         #TODO Check if it is 3 or 4
         #Queen hasn't been placed until round 4
-        if (piece.color == Piece.PieceColour.BLACK) and (not self.black_queen_placed) and (self.round_counter == 4):
+        if ((piece.color == Piece.PieceColour.BLACK) and (piece.type != Piece.PieceType.QUEEN) and
+                (not self.black_queen_placed) and (self.round_counter == 4)):
             print(f"Queen has to be placed in first four moves. Place queen.")
             return False
         return True
@@ -339,9 +376,40 @@ class Game(Board):
         # Locate piece on the board (don't do checks if it is on top - this is done later)
         else:
             for p in game_copy.get_cell(move.current_coord).get_pieces():
-                if p.type == move.piece.type:
+                if p.type == move.piece.type and p.color == move.piece.color:
                     piece = p
         return Move(move.current_coord, move.final_coord, piece)
+
+    def piece_movable(self, piece):
+        coord = piece.coord
+        piece_cell = self.get_cell(coord)
+        # Check if piece is on top of the cell stack
+        if piece_cell.get_top_piece() != piece:
+            return False
+
+        # Queen cannot be placed during the first move
+        if self.round_counter == 1 and piece.type == Piece.PieceType.QUEEN:
+            return False
+
+        # Queen has to be placed between moves 2 - 4
+        if (piece.type != Piece.PieceType.QUEEN and
+                1 < self.round_counter <= 4):
+            if piece.color == Piece.PieceColour.WHITE and not self.white_queen_placed:
+                return False
+            if piece.color == Piece.PieceColour.BLACK and not self.black_queen_placed:
+                return False
+
+        # Check if moving piece from current location wouldn't disconnect island
+        game_copy = copy.deepcopy(self)
+        piece_copy = None
+        for p in game_copy.get_cell(coord).get_pieces():
+            if p.type == piece.type and p.color == piece.color:
+                piece_copy = p
+        game_copy.get_cell(coord).remove_piece(piece_copy)
+        if not game_copy.is_valid_state():
+            return False
+        else:
+            return True
 
     def is_move_legal(self, move):
         game_copy = copy.deepcopy(self)
@@ -397,6 +465,11 @@ class Game(Board):
         #Placing piece on the board
         if (current_cell is None) and not (new_cell is None):
             new_cell.add_piece(move.piece)
+            if move.piece.type == Piece.PieceType.QUEEN:
+                if move.piece.color == Piece.PieceColour.WHITE:
+                    self.white_queen_placed = True
+                if move.piece.color == Piece.PieceColour.BLACK:
+                    self.black_queen_placed = True
             self.update_stats()
             print(f"Piece {move.piece} is now on the board at {move.final_coord}.")
             return True
@@ -409,32 +482,6 @@ class Game(Board):
         else:
             print(f"You are trying to do {move} and that is not possible. Coordinates not on board.")
             return False
-
-    def check_win(self):
-        white_queen_coord = self.piece_bank_white["queen"].coord
-        black_queen_coord = self.piece_bank_black["queen"].coord
-        white_winner = False
-        black_winner = False
-        if self.get_occupied_neighbors(white_queen_coord) == 6:
-            self.winning_state = True
-            black_winner = True
-        if self.get_occupied_neighbors(black_queen_coord) == 6:
-            self.winning_state = True
-            white_winner = True
-
-        # White is winner
-        if white_winner and not black_winner:
-            return "White wins!"
-        # Black is winner
-        if white_winner and black_winner:
-            return "Black wins!"
-        # This would be weird situation, but it would be a draw. Both queens have 6 neighbours.
-        if white_winner and black_winner:
-            return "How did you manage to do this?! This is draw!"
-
-        return False
-
-
 
     def make_move(self, move):
         if self.is_move_legal(move):

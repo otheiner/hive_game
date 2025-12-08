@@ -1,6 +1,7 @@
+import copy
+
+from src.cell import GridCoordinates
 from texture import Texture
-
-
 
 class Piece:
     class PieceType:
@@ -11,6 +12,7 @@ class Piece:
         BEETLE = "beetle"
         MOSQUITTO = "mosquito"
         LADYBUG = "ladybug"
+        PILLBUG = "pillbug"
 
     class PieceColour():
         BLACK = "black"
@@ -34,6 +36,8 @@ class Piece:
             self.texture = Texture.TextureType.BLACK_MOSQUITTO
         if self.type == Piece.PieceType.LADYBUG and self.color == Piece.PieceColour.BLACK:
             self.texture = Texture.TextureType.BLACK_LADYBUG
+        if self.type == Piece.PieceType.PILLBUG and self.color == Piece.PieceColour.BLACK:
+            self.texture = Texture.TextureType.BLACK_PILLBUG
         if self.type == Piece.PieceType.QUEEN and self.color == Piece.PieceColour.WHITE:
             self.texture = Texture.TextureType.WHITE_QUEEN
         if self.type == Piece.PieceType.ANT and self.color == Piece.PieceColour.WHITE:
@@ -48,72 +52,144 @@ class Piece:
             self.texture = Texture.TextureType.WHITE_MOSQUITTO
         if self.type == Piece.PieceType.LADYBUG and self.color == Piece.PieceColour.WHITE:
             self.texture = Texture.TextureType.WHITE_LADYBUG
+        if self.type == Piece.PieceType.PILLBUG and self.color == Piece.PieceColour.WHITE:
+            self.texture = Texture.TextureType.WHITE_PILLBUG
 
     def __repr__(self):
         return f"{self.color} {self.type}"
 
-    def get_possible_moves(self, game_state):
+    def piece_movement_pattern(self, game_state):
         raise NotImplementedError
 
-class Ant(Piece):
-    def __init__(self, colour):
-        super().__init__(self.PieceType.ANT, colour)
-
-    #TODO implement freedom to move rule
     def get_possible_moves(self, game_state):
         coord = self.coord
         #Look for position where to place
         if coord is None:
             return game_state.get_possible_placements(self)
         else:
-            return game_state.get_playable_border(coord)
+            if not game_state.piece_movable(self):
+                return []
+            else:
+                return self.piece_movement_pattern(game_state)
+
+class Ant(Piece):
+    def __init__(self, colour):
+        super().__init__(self.PieceType.ANT, colour)
+
+    def piece_movement_pattern(self, game_state):
+        return self.flood_fill_ant(self.coord, game_state)
+
+    def flood_fill_ant(self, start_coord, game_state, visited=None):
+        print(f"kuk dtype {type(game_state)}")
+        if visited is None:
+            visited = set()
+        if not start_coord == self.coord:
+            visited.add(game_state.get_cell(start_coord))
+        for empty_neighbor in game_state.get_empty_neighbors(start_coord):
+            # Check if the only neighbor isn't the piece - then don't include it to playable border
+            occupied = game_state.get_occupied_neighbors(empty_neighbor.coord)
+            if len(occupied) == 1:
+                if occupied[0].coord == self.coord:
+                    continue
+            if (len(game_state.get_occupied_neighbors(empty_neighbor.coord)) > 0 and
+                    game_state.freedom_to_move(start_coord, empty_neighbor.coord) and
+                    empty_neighbor not in visited):
+                self.flood_fill_ant(empty_neighbor.coord, game_state, visited)
+        return visited
 
 class Queen(Piece):
     def __init__(self, colour):
         super().__init__(self.PieceType.QUEEN, colour)
 
-    def get_possible_moves(self, game_state):
+    def piece_movement_pattern(self, game_state):
         coord = self.coord
-        if coord is None:
-            return game_state.get_possible_placements(self)
-        else:
-            playable_border = game_state.get_playable_border(self.coord)
-            possible_moves = []
-            queen_cell = game_state.get_cell(coord)
-            for neighbor in game_state.get_neighbors(queen_cell.coord):
-                if neighbor in playable_border:
-                    possible_moves.append(neighbor)
-            return possible_moves
-
-class Spider(Piece):
-    def __init__(self, colour):
-        super().__init__(self.PieceType.SPIDER, colour)
-
-    def get_possible_moves(self, game_state):
-        #TODO implement me
-        return
+        possible_moves = []
+        queen_cell = game_state.get_cell(coord)
+        for neighbor in game_state.get_empty_neighbors(queen_cell.coord):
+            if  (game_state.freedom_to_move(coord, neighbor.coord) and
+                (len(game_state.get_occupied_neighbors(neighbor.coord)) > 1)):
+                possible_moves.append(neighbor)
+        return possible_moves
 
 class Grasshopper(Piece):
     def __init__(self, colour):
         super().__init__(self.PieceType.GRASSHOPPER, colour)
 
-    def get_possible_moves(self,  game_state):
-        #TODO implement me
-        return
+    def piece_movement_pattern(self,  game_state):
+        coord = self.coord
+        possible_placements = []
+        for neighbor in game_state.get_occupied_neighbors(coord):
+            direction = neighbor.coord - coord
+            new_coord = neighbor.coord
+            while game_state.get_cell(new_coord).has_piece():
+                new_coord += direction
+            possible_placements.append(game_state.get_cell(new_coord))
+        return possible_placements
 
 class Beetle(Piece):
     def __init__(self, colour):
         super().__init__(self.PieceType.BEETLE, colour)
 
-    def get_possible_moves(self, game_state):
-        #TODO implement me
-        return
+    def piece_movement_pattern(self, game_state):
+        coord = self.coord
+        possible_moves = []
+        # levels indexed from 1, level 0 is empty cell
+        level = game_state.get_cell(coord).get_pieces().index(self) + 1
+        beetle_cell = game_state.get_cell(coord)
+        for neighbor in game_state.get_neighbors(beetle_cell.coord):
+            if (game_state.freedom_to_move(coord, neighbor.coord, level) and
+                (len(game_state.get_occupied_neighbors(neighbor.coord)) > 1)):
+                possible_moves.append(neighbor)
+        return possible_moves
 
 class Mosquito(Piece):
     def __init__(self, colour):
         super().__init__(self.PieceType.MOSQUITTO, colour)
 
-    def get_possible_moves(self, game_state):
+    def piece_movement_pattern(self, game_state):
+        coord = self.coord
+        level = game_state.get_cell(coord).get_pieces().index(self) + 1
+        game_copy = copy.deepcopy(game_state)
+        new_piece_type = None
+        if len(game_state.get_occupied_neighbors(coord)) == 1:
+            if game_state.get_occupied_neighbors(coord)[0].get_top_piece().type == Piece.PieceType.MOSQUITTO:
+                return []
+        if level > 1:
+            new_piece_type = Beetle(self.color)
+        else:
+            for neighbor in game_state.get_occupied_neighbors(coord):
+                top_piece_type = neighbor.get_top_piece().type
+                if top_piece_type == Piece.PieceType.QUEEN:
+                    new_piece_type = Queen(self.color)
+                elif top_piece_type == Piece.PieceType.ANT:
+                    new_piece_type = Ant(self.color)
+                elif top_piece_type == Piece.PieceType.GRASSHOPPER:
+                    new_piece_type = Grasshopper(self.color)
+                elif top_piece_type == Piece.PieceType.BEETLE:
+                    new_piece_type = Beetle(self.color)
+                elif top_piece_type == Piece.PieceType.SPIDER:
+                    new_piece_type = Spider(self.color)
+                elif top_piece_type == Piece.PieceType.LADYBUG:
+                    new_piece_type = Ladybug(self.color)
+                elif top_piece_type == Piece.PieceType.PILLBUG:
+                    new_piece_type = Pillbug(self.color)
+
+        if new_piece_type is None:
+            return []
+        else:
+            piece = None
+            for p in game_copy.get_cell(coord).get_pieces():
+                if p.type == self.type and p.color == self.color:
+                    piece = p
+            game_copy.get_cell(coord).remove_piece(piece)
+            game_copy.get_cell(coord).add_piece(new_piece_type)
+            return new_piece_type.piece_movement_pattern(game_copy)
+
+class Spider(Piece):
+    def __init__(self, colour):
+        super().__init__(self.PieceType.SPIDER, colour)
+
+    def piece_movement_pattern(self, game_state):
         #TODO implement me
         return
 
@@ -121,6 +197,14 @@ class Ladybug(Piece):
     def __init__(self, colour):
         super().__init__(self.PieceType.LADYBUG, colour)
 
-    def get_possible_moves(self, game_state):
+    def piece_movement_pattern(self, game_state):
+        #TODO implement me
+        return
+
+class Pillbug(Piece):
+    def __init__(self, colour):
+        super().__init__(self.PieceType.PILLBUG, colour)
+
+    def piece_movement_pattern(self, game_state):
         #TODO implement me
         return

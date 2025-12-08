@@ -14,6 +14,18 @@ class GridCoordinates:
         return isinstance(other, GridCoordinates) and \
                (self.q, self.r, self.s) == (other.q, other.r, other.s)
 
+    def __add__(self, other):
+        if isinstance(other, GridCoordinates):
+          return GridCoordinates(self.q + other.q, self.r + other.r, self.s + other.s)
+        else:
+            return NotImplemented
+
+    def __sub__(self, other):
+        if isinstance(other, GridCoordinates):
+          return GridCoordinates(self.q - other.q, self.r - other.r, self.s - other.s)
+        else:
+            return NotImplemented
+
     def __hash__(self):
         return hash((self.q, self.r, self.s))
 
