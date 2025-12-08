@@ -1,13 +1,13 @@
 import importlib
-import board as board_lib
-import piece as piece_lib
+import src.board as board_lib
+import src.piece as piece_lib
 from src.cell import GridCoordinates
 from src.move import Move
 
 importlib.reload(board_lib)
 importlib.reload(piece_lib)
-from board import Board
-from piece import Piece, Ant, Queen, Spider, Grasshopper, Beetle, Mosquito, Ladybug
+from src.board import Board
+from src.piece import Piece, Ant, Queen, Spider, Grasshopper, Beetle, Mosquito, Ladybug
 import copy
 
 class Game(Board):
@@ -53,14 +53,20 @@ class Game(Board):
     def check_win(self):
         white_queen_coord = self.piece_bank_white["queen"].coord
         black_queen_coord = self.piece_bank_black["queen"].coord
+        print("black_queen_coord", black_queen_coord)
+        print("white_queen_coord", white_queen_coord)
+        print(f"White queen neighbours: ", self.get_occupied_neighbors(white_queen_coord))
+        print(f"Black queen neighbours: ", self.get_occupied_neighbors(white_queen_coord))
         white_winner = False
         black_winner = False
-        if self.get_occupied_neighbors(white_queen_coord) == 6:
+        if len(self.get_occupied_neighbors(white_queen_coord)) == 6:
             self.winning_state = True
             black_winner = True
-        if self.get_occupied_neighbors(black_queen_coord) == 6:
+        if len(self.get_occupied_neighbors(black_queen_coord)) == 6:
             self.winning_state = True
             white_winner = True
+
+        print(f"Checking winning state: {self.winning_state}")
 
         # White is winner
         if white_winner and not black_winner:
@@ -383,6 +389,10 @@ class Game(Board):
     def piece_movable(self, piece):
         coord = piece.coord
         piece_cell = self.get_cell(coord)
+        print("piece_movable: checking", piece, "coord", coord)
+        print(" top piece:", piece_cell.get_top_piece(), "equals:", piece_cell.get_top_piece() is piece)
+        print(" round_counter:", self.round_counter, "white_queen_placed:", self.white_queen_placed,
+              "black_queen_placed:", self.black_queen_placed)
         # Check if piece is on top of the cell stack
         if piece_cell.get_top_piece() != piece:
             return False
@@ -395,8 +405,10 @@ class Game(Board):
         if (piece.type != Piece.PieceType.QUEEN and
                 1 < self.round_counter <= 4):
             if piece.color == Piece.PieceColour.WHITE and not self.white_queen_placed:
+                print(f"Queen has to be places.")
                 return False
             if piece.color == Piece.PieceColour.BLACK and not self.black_queen_placed:
+                print(f"Queen has to be places.")
                 return False
 
         # Check if moving piece from current location wouldn't disconnect island
@@ -484,10 +496,11 @@ class Game(Board):
             return False
 
     def make_move(self, move):
+        #FIXME Fix logic of placing queen between rounds 2-4
         if self.is_move_legal(move):
             move_success = self._move_piece(move)
             message = self.check_win()
-            if self.winning_state:
+            if self.check_win():
                 print(f"{message}")
             return move_success
         else:

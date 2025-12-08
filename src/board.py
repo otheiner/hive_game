@@ -1,6 +1,5 @@
 import numpy as np
-from cell import Cell, GridCoordinates
-from piece import Piece
+from src.cell import Cell, GridCoordinates
 
 class Board:
     # They are ordered in mathematically positive sense - starting on "x-axis"

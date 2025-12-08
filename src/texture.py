@@ -19,3 +19,4 @@ class Texture:
         EMPTY_CELL = "empty"
         NO_TEXTURE = "no_texture"
         HIGHLIGHTED_CELL = "highlighted_cell"
+        SUGGESTED_MOVE = "suggested_move"

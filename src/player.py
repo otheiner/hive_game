@@ -1,4 +1,4 @@
-import ui as UI
+import src.ui as UI
 
 class Player:
     class PlayerColor:
@@ -21,9 +21,10 @@ class Player:
 class HumanPlayer(Player):
     def __init__(self, color, ui):
         #TODO Add here new human controlled UIs to following condition
-        if not isinstance(ui, UI.MatplotlibGUI):
+        if isinstance(ui, UI.MatplotlibGUI) or isinstance(ui, UI.PygameGUI):
+            super().__init__(color, ui)
+        else:
             raise ValueError(f"Human player cannot use {ui.__class__} UI.")
-        super().__init__(color, ui)
 
     def get_move(self, game):
         move = self.ui.wait_for_user_input(self.color)

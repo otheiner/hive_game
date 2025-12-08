@@ -1,3 +1,5 @@
+from itertools import dropwhile
+
 import matplotlib.patches as patches
 import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
@@ -5,22 +7,24 @@ import matplotlib
 import math
 
 import importlib
-import cell as cell_lib
-import board as board_lib
-import piece as piece_lib
-import texture as texture_lib
-from src.player import Player
+import src.cell as cell_lib
+import src.board as board_lib
+import src.piece as piece_lib
+import src.texture as texture_lib
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from src.player import Player
+#from src.player import Player
 
 #from player import Player, HumanPlayer, Move
 importlib.reload(cell_lib)
 importlib.reload(piece_lib)
 importlib.reload(board_lib)
 importlib.reload(texture_lib)
-from piece import Piece, Ant, Queen, Spider, Grasshopper, Beetle
-from texture import Texture
-from cell import Cell, GridCoordinates
-from move import Move
-from board import Board
+from src.texture import Texture
+from src.cell import Cell, GridCoordinates
+from src.move import Move
+import pygame
 
 class UI:
     def __init__(self, game_state, cell_size = 1,  canvas_size_x = 20, canvas_size_y = 20):
@@ -92,12 +96,46 @@ class UI:
         s = -q - r
         return q, r, s
 
+    def cartesian_to_axial(self, x, y):
+        r = 2/3 * y * 1/self.cell_size
+        q = 1/self.cell_size * (x/math.sqrt(3) - y/3)
+        return q, r
+
     def cube_to_cartesian(self, q, r, s):
         x = (math.sqrt(3) * self.cell_size * self.cube_to_axial(q, r, s)[0] +
              math.sqrt(3) / 2 * self.cell_size * self.cube_to_axial(q, r, s)[1])
         y = 3 / 2 * self.cell_size * self.cube_to_axial(q, r, s)[1]
         return x, y
 
+    @staticmethod
+    def round_half_up(x):
+        if x >= 0:
+            return int(x + 0.5)
+        else:
+            return int(x - 0.5)
+
+    def cartesian_to_cube(self, x, y):
+        q, r = self.cartesian_to_axial(x, y)
+        s = -q -r
+
+        rounded_q = self.round_half_up(q)
+        rounded_r = self.round_half_up(r)
+        rounded_s = self.round_half_up(s)
+
+        # Compute the difference after rounding
+        dq = abs(q - rounded_q)
+        dr = abs(r - rounded_r)
+        ds = abs(s - rounded_s)
+
+        # Fix the coordinate that changed the most such that q+r+s=0
+        if dq > dr and dq > ds:
+            rounded_q = -rounded_r -rounded_s
+        if dr > ds:
+            rounded_r = -rounded_q -rounded_s
+        else:
+            rounded_s = -rounded_q -rounded_r
+
+        return rounded_q, rounded_r, rounded_s
 
 #To display what is drawn, show_canvas() has to be called in this class
 class MatplotlibGUI(UI):
@@ -213,8 +251,6 @@ class MatplotlibGUI(UI):
         self.draw_piece(cx, cy, cell_texture, show_border=show_border)
 
         ax = self._ensure_ax()
-        centre_x = self.canvas_size_x / 2
-        centre_y = self.canvas_size_x / 2
 
         if show_coords:
             ax.text(self.screen_centre_x + cx - self.cell_size*0.7,
@@ -289,6 +325,9 @@ class MatplotlibGUI(UI):
     # TODO just type of input will be different but logic will be the same.
     def wait_for_user_input(self, player_color):
         print(f"----- Player {player_color}, round {self.game.round_counter} -----")
+
+        #FIXME This import is hotfix - solve circular imports
+        from src.player import Player
 
         if player_color == Player.PlayerColor.WHITE:
             piece_bank = self.game.piece_bank_white
@@ -384,3 +423,249 @@ class MatplotlibGUI(UI):
             return self.wait_for_user_input(player_color)
 
         return Move(start_coord, end_coord, selected_piece)
+
+class PygameGUI(UI):
+    def __init__(self, game_state, cell_size = 1,  screen_width = 20, screen_height = 20):
+        super().__init__(game_state, cell_size, canvas_size_x=screen_width, canvas_size_y=screen_height)
+        pygame.init()
+        self.screen_width = screen_width
+        self.screen_height = screen_height
+        self.screen = None
+        pygame.display.set_caption("Hive Game")
+
+    def _ensure_screen(self):
+        if self.screen is None:
+            self.screen = pygame.display.set_mode((self.screen_width, self.screen_height))
+            self.screen.fill((255, 255, 255))
+        return self.screen
+
+    def handle_click(self, origin_x = None, origin_y = None):
+        if (origin_x is None) or (origin_y is None):
+            origin_x = self.screen_centre_x
+            origin_y = self.screen_centre_y
+        mx, my = pygame.mouse.get_pos()
+        x = mx - origin_x
+        y = my - origin_y
+        q, r, s = self.cartesian_to_cube(x, y)
+        #print("Clicked hex:", q, r)
+        return q, r, s
+
+    #FIXME Implement following method
+    def wait_for_user_input(self, player_color):
+        start_q, start_r, start_s = None, None, None
+        end_q, end_r, end_s = None, None, None
+        start_cell_selected = False
+        end_cell_selected = False
+        print(f"Player color: {player_color}")
+        print("Click the start of the move:")
+        while not start_cell_selected:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    return None
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                    start_q, start_r, start_s = self.handle_click()
+                    print(f"Clicked start cell: {start_q}, {start_r}, {start_s}")
+                    start_cell_selected = True
+
+        start_cell = self.game.get_cell(GridCoordinates(start_q, start_r, start_s))
+        if not start_cell.has_piece():
+            print(f"Select cell with a piece")
+            self.draw_board(show_coords=True)
+            self.draw_stats()
+            return self.wait_for_user_input(player_color)
+        piece = start_cell.get_top_piece()
+        print(f"Selected {piece}.")
+        self.draw_cell(start_cell.coord, cell_texture=Texture.TextureType.HIGHLIGHTED_CELL)
+
+        if piece.color == player_color:
+            self.show_canvas()
+        else:
+            print(f"Select piece of {player_color} player.")
+            self.draw_board(show_coords=True)
+            self.draw_stats()
+            return self.wait_for_user_input(player_color)
+        possible_moves = piece.get_possible_moves(self.game)
+        print(f"Possible moves: {possible_moves}")
+        self.draw_cells(possible_moves, cell_texture = Texture.TextureType.SUGGESTED_MOVE)
+        self.show_canvas()
+
+        print(f"Click end of the move:")
+        while not end_cell_selected:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    return None
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                    end_q, end_r, end_s = self.handle_click()
+                    print(f"Clicked end cell: {end_q}, {end_r}, {end_s}")
+                    end_cell_selected = True
+                    #FIXME Ths is for testing - this should return move
+
+        end_cell = self.game.get_cell(GridCoordinates(end_q, end_r, end_s))
+        if end_cell not in possible_moves:
+            print(f"Select only cells from allowed moves.")
+            self.draw_board(show_coords=True)
+            self.draw_stats()
+            return self.wait_for_user_input(player_color)
+
+        return Move(start_cell.coord, end_cell.coord, piece)
+
+    def draw_cell(self, coord, cell_texture=Texture.TextureType.NO_TEXTURE,
+                  show_coords=False, show_border=True):
+        cx = self.cube_to_cartesian(coord.q, coord.r, coord.s)[0]
+        cy = self.cube_to_cartesian(coord.q, coord.r, coord.s)[1]
+        self.draw_piece(cx, cy, cell_texture, show_border=show_border)
+
+        screen = self._ensure_screen()
+
+        if show_coords:
+            font = pygame.font.Font(None, 15)
+            text_surface = font.render(f"{coord.q, coord.r}", True, (255, 0, 0))
+            text_rect = text_surface.get_rect(center=(self.screen_centre_x + cx - self.cell_size * 0,
+                                                      self.screen_centre_y + cy))
+            screen.blit(text_surface, text_rect)
+        return screen
+
+    def draw_piece(self, cx, cy, piece_texture=Texture.TextureType.NO_TEXTURE,
+                   show_border=True):
+        screen = self._ensure_screen()
+
+        fill_alpha_bkg = 1
+        fill_alpha_circle = 1
+        border_color = 'black'
+        if show_border:
+            border_alpha = 1
+        else:
+            border_alpha = 0
+        white_piece = (1.0, 0.99, 0.82)  # cream colour
+        black_piece = 'black'
+        if piece_texture == Texture.TextureType.NO_TEXTURE:
+            piece_color = 'white'
+            fill_color = 'white'
+            fill_alpha_bkg = 0
+            fill_alpha_circle = 0
+        elif piece_texture == Texture.TextureType.HIGHLIGHTED_CELL:
+            piece_color = 'white'
+            fill_color = 'grey'
+            fill_alpha_bkg = 0.2
+            fill_alpha_circle = 0
+            border_color = 'red'
+        elif piece_texture == Texture.TextureType.SUGGESTED_MOVE:
+            piece_color = 'white'
+            fill_color = 'grey'
+            fill_alpha_bkg = 0.2
+            fill_alpha_circle = 0
+        elif piece_texture == Texture.TextureType.WHITE_QUEEN:
+            piece_color = 'yellow'
+            fill_color = white_piece
+        elif piece_texture == Texture.TextureType.WHITE_SPIDER:
+            piece_color = 'brown'
+            fill_color = white_piece
+        elif piece_texture == Texture.TextureType.WHITE_GRASSHOPPER:
+            piece_color = 'green'
+            fill_color = white_piece
+        elif piece_texture == Texture.TextureType.WHITE_BEETLE:
+            piece_color = 'purple'
+            fill_color = white_piece
+        elif piece_texture == Texture.TextureType.WHITE_ANT:
+            piece_color = 'blue'
+            fill_color = white_piece
+        elif piece_texture == Texture.TextureType.WHITE_LADYBUG:
+            piece_color = 'red'
+            fill_color = white_piece
+        elif piece_texture == Texture.TextureType.WHITE_MOSQUITTO:
+            piece_color = 'grey'
+            fill_color = white_piece
+        elif piece_texture == Texture.TextureType.WHITE_PILLBUG:
+            piece_color = 'turquoise'
+            fill_color = white_piece
+        elif piece_texture == Texture.TextureType.BLACK_QUEEN:
+            piece_color = 'yellow'
+            fill_color = black_piece
+        elif piece_texture == Texture.TextureType.BLACK_SPIDER:
+            piece_color = 'brown'
+            fill_color = black_piece
+        elif piece_texture == Texture.TextureType.BLACK_GRASSHOPPER:
+            piece_color = 'green'
+            fill_color = black_piece
+        elif piece_texture == Texture.TextureType.BLACK_BEETLE:
+            piece_color = 'purple'
+            fill_color = black_piece
+        elif piece_texture == Texture.TextureType.BLACK_ANT:
+            piece_color = 'blue'
+            fill_color = black_piece
+        elif piece_texture == Texture.TextureType.BLACK_LADYBUG:
+            piece_color = 'red'
+            fill_color = black_piece
+        elif piece_texture == Texture.TextureType.BLACK_MOSQUITTO:
+            piece_color = 'grey'
+            fill_color = black_piece
+        elif piece_texture == Texture.TextureType.BLACK_PILLBUG:
+            piece_color = 'turquoise'
+            fill_color = black_piece
+        else:
+            print(f"Warning: {piece_texture} is unknown, or not implemented in this GUI. "
+                  f"Setting turquoise.")
+            fill_color = 'turquoise'
+            piece_color = 'turquoise'
+
+        rgba_fill = self.rgba_to_pygame(mcolors.to_rgba(fill_color, fill_alpha_bkg))
+        rgba_border = self.rgba_to_pygame(mcolors.to_rgba(border_color, border_alpha))
+        pygame.draw.polygon(screen, rgba_fill,
+                            self.cell_corners(self.screen_centre_x + cx, self.screen_centre_y + cy), 0)
+        pygame.draw.polygon(screen, rgba_border,
+                            self.cell_corners(self.screen_centre_x + cx, self.screen_centre_y + cy), 2)
+        rgba_fill = self.rgba_to_pygame(mcolors.to_rgba(piece_color, fill_alpha_circle))
+        pygame.draw.circle(screen, rgba_fill,
+                           (self.screen_centre_x + cx, self.screen_centre_y + cy), self.cell_size / 3, 0)
+        return screen
+
+    def draw_stats(self):
+        screen = self._ensure_screen()
+        font = pygame.font.Font(None, 25)
+        if self.game.white_turn:
+            line1 = "White turn"
+        else:
+            line1 = "Black turn"
+        line2 = f"Round: {self.game.round_counter}"
+        text_surface1 = font.render(line1, True, (0, 0, 0))
+        text_surface2 = font.render(line2, True, (0, 0, 0))
+
+        x = 0.45 * self.screen_width
+        y = 0.07 * self.canvas_size_y
+        screen.blit(text_surface1, (x, y))
+        screen.blit(text_surface2, (x, y + text_surface1.get_height() + 2))  # 2px spacing
+
+        return screen
+
+    @staticmethod
+    def rgba_to_pygame(rgba):
+        r, g, b, a = rgba
+        return int(r * 255), int(g * 255), int(b * 255), int(a * 255)
+
+    #FIXME This has to be implemented
+    def draw_piece_banks(self):
+        return
+
+    # This should draw only placed pieces, not empty cells
+    def draw_board(self, show_coords=False, show_grid=False):
+        self.clear_canvas()
+        white_pieces = self.game.piece_bank_white
+        black_pieces = self.game.piece_bank_black
+        # Draw only pieces that are on top and not in bank
+        for bank in (white_pieces, black_pieces):
+            for piece in bank.values():
+                if piece.coord is not None:
+                    piece_on_top = (self.game.get_cell(piece.coord).get_top_piece() == piece)
+                    if piece_on_top:
+                        self.draw_cell(piece.coord, cell_texture=piece.texture,
+                                        show_coords=show_coords, show_border=True)
+
+    def show_canvas(self):
+        pygame.display.flip()
+        return
+
+    def clear_canvas(self):
+        if self.screen is None:
+            return
+        self.screen.fill((255, 255, 255))
+        return

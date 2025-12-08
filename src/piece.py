@@ -1,7 +1,7 @@
 import copy
 
 from src.cell import GridCoordinates
-from texture import Texture
+from src.texture import Texture
 
 class Piece:
     class PieceType:
@@ -80,7 +80,6 @@ class Ant(Piece):
         return self.flood_fill_ant(self.coord, game_state)
 
     def flood_fill_ant(self, start_coord, game_state, visited=None):
-        print(f"kuk dtype {type(game_state)}")
         if visited is None:
             visited = set()
         if not start_coord == self.coord:
@@ -190,8 +189,35 @@ class Spider(Piece):
         super().__init__(self.PieceType.SPIDER, colour)
 
     def piece_movement_pattern(self, game_state):
-        #TODO implement me
-        return
+        return self.flood_fill_spider(self.coord, game_state)
+
+#FIXME Fix implementation of spider - have not been tested
+    def flood_fill_spider(self, start_coord, game_state, visited = None, depth = 0, possible_placements = None):
+        if visited is None:
+            visited = set()
+            possible_placements = set()
+        if not start_coord == self.coord and depth <= 3:
+            visited.add(game_state.get_cell(start_coord))
+        for empty_neighbor in game_state.get_empty_neighbors(start_coord):
+            if game_state.freedom_to_move(start_coord, empty_neighbor.coord):
+                # This is to make sure that we always follow the island edge and we never
+                # "jump over the bay"
+                current_neighbors = game_state.get_occupied_neighbors(start_coord)
+                neighbor_neighbors = game_state.get_occupied_neighbors(empty_neighbor.coord)
+                for current_neighbor in current_neighbors:
+                    for neighbor_neighbor in neighbor_neighbors:
+                        if current_neighbor == neighbor_neighbor:
+                            if depth == 3:
+                                possible_placements.add(game_state.get_cell(start_coord))
+                                return visited
+                            else:
+                                if empty_neighbor not in visited:
+                                    self.flood_fill_spider(empty_neighbor.coord, game_state, visited, depth + 1, possible_placements)
+                                else:
+                                    return visited
+            if depth == 3:
+                possible_placements.add(game_state.get_cell(start_coord))
+        return visited
 
 class Ladybug(Piece):
     def __init__(self, colour):
