@@ -209,7 +209,10 @@ class Game(Board):
                                                               cell_to.coord.s + bottleneck_right[2]))
 
         # This can happen when we are at the edge of the game field
+        #TODO Let's see if this fixes things or breaks (original line is commented). New rule should make
+        # sure that we are able to reach the other cellby sliding and following the edge.
         if (bottleneck_left_cell is None) or (bottleneck_right_cell is None):
+        #if (bottleneck_left_cell is None) != (bottleneck_right_cell is None):
             return True
         if (len(bottleneck_left_cell.get_pieces()) < level or
             len(bottleneck_right_cell.get_pieces()) < level):
@@ -506,3 +509,20 @@ class Game(Board):
         else:
             print(f"Cannot make move {move}. Illegal move (or poorly implemented rules haha).")
             return False
+
+    def list_all_possible_moves(self, player_color):
+        if player_color == Piece.PieceColour.BLACK:
+            piece_bank = self.piece_bank_black
+        elif player_color == Piece.PieceColour.WHITE:
+            piece_bank = self.piece_bank_white
+        else:
+            raise ValueError(f"Player has some weird colour - should be BLACK or WHITE")
+
+        moves_list = []
+        for piece in piece_bank.values():
+            current_position = piece.coord
+            possible_moves = piece.get_possible_moves(self)
+            if len(possible_moves) > 0:
+                for move in possible_moves:
+                    moves_list.append(Move(current_position, move, piece))
+        return moves_list

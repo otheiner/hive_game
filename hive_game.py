@@ -11,7 +11,7 @@ from src.ui import MatplotlibGUI
 from src.move import Move
 
 def main():
-    game = Game(20)
+    game = Game(30)
     #ui = MatplotlibGUI(game,1.3, 40, 40)
     ui = PygameGUI(game, 25, 1000, 750)
     players = [HumanPlayer(Player.PlayerColor.WHITE,ui), HumanPlayer(Player.PlayerColor.BLACK,ui)]
@@ -25,6 +25,10 @@ def main():
     ui.game.make_move(Move(None, GridCoordinates(0, 1), ui.game.piece_bank_white["grasshopper1"]))
     ui.game.make_move(Move(None, GridCoordinates(1, -2), ui.game.piece_bank_black["queen"]))
     ui.game.make_move(Move(None, GridCoordinates(-1, 2), ui.game.piece_bank_white["ant3"]))
+    ui.game.make_move(Move(None, GridCoordinates(1, -3), ui.game.piece_bank_black["beetle1"]))
+    ui.game.make_move(Move(None, GridCoordinates(1, 0), ui.game.piece_bank_white["beetle1"]))
+    ui.game.make_move(Move(None, GridCoordinates(0, -3), ui.game.piece_bank_black["spider1"]))
+    ui.game.make_move(Move(None, GridCoordinates(0, 2), ui.game.piece_bank_white["spider1"]))
     #ui.game.make_move(Move(None, GridCoordinates(1, 1), ui.game.piece_bank_white["mosquito"]))
     #ui.game.make_move(Move(None, GridCoordinates(0, -2), ui.game.piece_bank_black["queen"]))
     #ui.game.make_move(Move(GridCoordinates(0, 1), GridCoordinates(-1, -0), ui.game.piece_bank_white["ant1"]))
@@ -44,6 +48,10 @@ def main():
         print(f"current_player_index: {current_player_index}")
         print(f"white_turn: {game.white_turn}")
         player = players[current_player_index]
+        if len(game.list_all_possible_moves(player.color)) == 0:
+            print(f"No possible moves for {player.color}. Other player's turn.")
+            ui.game.update_stats()
+            pass
         move = player.get_move(game)
         if move is None:
             return
