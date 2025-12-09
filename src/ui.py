@@ -78,10 +78,14 @@ class UI:
     def move_piece(self,current_cell, new_cell, piece):
         return self.game.move_piece(current_cell, new_cell, piece)
 
-    def cell_corners(self, cx, cy):
+    def cell_corners(self, cx, cy, flat_top = False):
         corners = []
+        if flat_top:
+            offset = 0
+        else:
+            offset = 30
         for i in range(6):
-            angle = math.radians(60 * i - 30)  # pointy-top
+            angle = math.radians(60 * i - offset)  # pointy-top
             x = cx + self.cell_size * math.cos(angle)
             y = cy + self.cell_size * math.sin(angle)
             corners.append((x, y))
@@ -425,19 +429,32 @@ class MatplotlibGUI(UI):
         return Move(start_coord, end_coord, selected_piece)
 
 class PygameGUI(UI):
-    def __init__(self, game_state, cell_size = 1,  screen_width = 20, screen_height = 20):
+    def __init__(self, game_state, cell_size = 1,  screen_width = 1000, screen_height = 750):
         super().__init__(game_state, cell_size, canvas_size_x=screen_width, canvas_size_y=screen_height)
         pygame.init()
         self.screen_width = screen_width
         self.screen_height = screen_height
         self.screen = None
+        self.BANK_WIDTH = self.screen_width * 0.1
+        self.BANK_HEIGHT = self.screen_height
+        self.VIEWPORT_WIDTH = self.screen_width - 2 * self.BANK_WIDTH
+        self.VIEWPORT_HEIGHT = self.screen_height
+        self.viewport_surface = pygame.Surface((self.VIEWPORT_WIDTH, self.VIEWPORT_HEIGHT), pygame.SRCALPHA)
+        self.white_bank_surface = pygame.Surface((self.BANK_WIDTH, self.BANK_HEIGHT))
+        self.black_bank_surface = pygame.Surface((self.BANK_WIDTH, self.BANK_HEIGHT))
+        self.screen = pygame.display.set_mode((self.screen_width, self.screen_height))
+        self.viewport_surface.fill((255, 255, 255))
+        self.white_bank_surface.fill((255, 255, 255))
+        self.black_bank_surface.fill((255, 255, 255))
         pygame.display.set_caption("Hive Game")
 
-    def _ensure_screen(self):
-        if self.screen is None:
-            self.screen = pygame.display.set_mode((self.screen_width, self.screen_height))
-            self.screen.fill((255, 255, 255))
-        return self.screen
+    # def _ensure_screen(self):
+    #     if self.screen is None:
+    #         self.screen = pygame.display.set_mode((self.screen_width, self.screen_height))
+    #         self.viewport_surface.fill((255, 255, 255))
+    #         self.white_bank_surface.fill((255, 255, 255))
+    #         self.black_bank_surface.fill((255, 255, 255))
+    #     return self.screen
 
     def handle_click(self, origin_x = None, origin_y = None):
         if (origin_x is None) or (origin_y is None):
@@ -470,7 +487,8 @@ class PygameGUI(UI):
         start_cell = self.game.get_cell(GridCoordinates(start_q, start_r, start_s))
         if not start_cell.has_piece():
             print(f"Select cell with a piece")
-            self.draw_board(show_coords=True)
+            self.clear_canvas()
+            self.draw_board()
             self.draw_stats()
             return self.wait_for_user_input(player_color)
         piece = start_cell.get_top_piece()
@@ -481,12 +499,14 @@ class PygameGUI(UI):
             self.show_canvas()
         else:
             print(f"Select piece of {player_color} player.")
-            self.draw_board(show_coords=True)
+            self.clear_canvas()
+            self.draw_board()
             self.draw_stats()
             return self.wait_for_user_input(player_color)
         possible_moves = piece.get_possible_moves(self.game)
         print(f"Possible moves: {possible_moves}")
         self.draw_cells(possible_moves, cell_texture = Texture.TextureType.SUGGESTED_MOVE)
+        self.draw_piece_banks()
         self.show_canvas()
 
         print(f"Click end of the move:")
@@ -503,7 +523,8 @@ class PygameGUI(UI):
         end_cell = self.game.get_cell(GridCoordinates(end_q, end_r, end_s))
         if end_cell not in possible_moves:
             print(f"Select only cells from allowed moves.")
-            self.draw_board(show_coords=True)
+            self.draw_board()
+            self.draw_piece_banks()
             self.draw_stats()
             return self.wait_for_user_input(player_color)
 
@@ -515,19 +536,27 @@ class PygameGUI(UI):
         cy = self.cube_to_cartesian(coord.q, coord.r, coord.s)[1]
         self.draw_piece(cx, cy, cell_texture, show_border=show_border)
 
-        screen = self._ensure_screen()
+        # screen = self._ensure_screen()
 
         if show_coords:
             font = pygame.font.Font(None, 15)
             text_surface = font.render(f"{coord.q, coord.r}", True, (255, 0, 0))
-            text_rect = text_surface.get_rect(center=(self.screen_centre_x + cx - self.cell_size * 0,
-                                                      self.screen_centre_y + cy))
-            screen.blit(text_surface, text_rect)
-        return screen
+            text_rect = text_surface.get_rect(center=(self.VIEWPORT_WIDTH/2 + cx - self.cell_size * 0,
+                                                      self.VIEWPORT_HEIGHT/2 + cy))
+            self.viewport_surface.blit(text_surface, text_rect)
+        return
 
     def draw_piece(self, cx, cy, piece_texture=Texture.TextureType.NO_TEXTURE,
-                   show_border=True):
-        screen = self._ensure_screen()
+                   show_border=True, surface = None, center_offset = True, flat_top = False):
+        if surface is None:
+            surface = self.viewport_surface
+
+        if center_offset:
+            draw_x = surface.get_width() // 2 + cx
+            draw_y = surface.get_height() // 2 + cy
+        else:
+            draw_x = cx
+            draw_y = cy
 
         fill_alpha_bkg = 1
         fill_alpha_circle = 1
@@ -546,14 +575,14 @@ class PygameGUI(UI):
         elif piece_texture == Texture.TextureType.HIGHLIGHTED_CELL:
             piece_color = 'white'
             fill_color = 'grey'
-            fill_alpha_bkg = 0.2
+            fill_alpha_bkg = 0
             fill_alpha_circle = 0
             border_color = 'red'
         elif piece_texture == Texture.TextureType.SUGGESTED_MOVE:
-            piece_color = 'white'
+            piece_color = 'grey'
             fill_color = 'grey'
-            fill_alpha_bkg = 0.2
-            fill_alpha_circle = 0
+            fill_alpha_bkg = 0.5
+            fill_alpha_circle = 0.5
         elif piece_texture == Texture.TextureType.WHITE_QUEEN:
             piece_color = 'yellow'
             fill_color = white_piece
@@ -610,17 +639,17 @@ class PygameGUI(UI):
 
         rgba_fill = self.rgba_to_pygame(mcolors.to_rgba(fill_color, fill_alpha_bkg))
         rgba_border = self.rgba_to_pygame(mcolors.to_rgba(border_color, border_alpha))
-        pygame.draw.polygon(screen, rgba_fill,
-                            self.cell_corners(self.screen_centre_x + cx, self.screen_centre_y + cy), 0)
-        pygame.draw.polygon(screen, rgba_border,
-                            self.cell_corners(self.screen_centre_x + cx, self.screen_centre_y + cy), 2)
+        pygame.draw.polygon(surface, rgba_fill,
+                            self.cell_corners(draw_x, draw_y,flat_top=flat_top), 0)
+        pygame.draw.polygon(surface, rgba_border,
+                            self.cell_corners(draw_x, draw_y,flat_top=flat_top), 2)
         rgba_fill = self.rgba_to_pygame(mcolors.to_rgba(piece_color, fill_alpha_circle))
-        pygame.draw.circle(screen, rgba_fill,
-                           (self.screen_centre_x + cx, self.screen_centre_y + cy), self.cell_size / 3, 0)
-        return screen
+        pygame.draw.circle(surface, rgba_fill,
+                           (draw_x, draw_y), self.cell_size / 3, 0)
+        return surface
 
     def draw_stats(self):
-        screen = self._ensure_screen()
+        #screen = self._ensure_screen()
         font = pygame.font.Font(None, 25)
         if self.game.white_turn:
             line1 = "White turn"
@@ -630,12 +659,12 @@ class PygameGUI(UI):
         text_surface1 = font.render(line1, True, (0, 0, 0))
         text_surface2 = font.render(line2, True, (0, 0, 0))
 
-        x = 0.45 * self.screen_width
-        y = 0.07 * self.canvas_size_y
-        screen.blit(text_surface1, (x, y))
-        screen.blit(text_surface2, (x, y + text_surface1.get_height() + 2))  # 2px spacing
+        x = 0.45 * self.VIEWPORT_HEIGHT
+        y = 0.07 * self.VIEWPORT_HEIGHT
+        self.viewport_surface.blit(text_surface1, (x, y))
+        self.viewport_surface.blit(text_surface2, (x, y + text_surface1.get_height() + 2))  # 2px spacing
 
-        return screen
+        return
 
     @staticmethod
     def rgba_to_pygame(rgba):
@@ -644,11 +673,36 @@ class PygameGUI(UI):
 
     #FIXME This has to be implemented
     def draw_piece_banks(self):
+        indent_x = self.BANK_WIDTH/2
+        indent_y = 0
+        piece_separation = self.cell_size * 1.2
+        #bottom_y = self.canvas_size_x * indent_y
+        black_x = -1 * self.canvas_size_x * indent_x
+        white_x = self.canvas_size_x * indent_x
+
+        # Draw white bank
+        piece_no = 0
+        for piece in self.game.piece_bank_white.values():
+            piece_no += 1
+            if piece.coord is None:
+                self.draw_piece(indent_x, indent_y + piece_no * (self.cell_size + piece_separation),
+                                piece_texture=piece.texture, surface=self.white_bank_surface, center_offset=False,
+                                flat_top=True)
+
+        # Draw black bank
+        piece_no = 0
+        for piece in self.game.piece_bank_black.values():
+            piece_no += 1
+            if piece.coord is None:
+                self.draw_piece(indent_x, indent_y + piece_no * (self.cell_size + piece_separation),
+                                piece_texture=piece.texture, surface=self.black_bank_surface, center_offset=False,
+                                flat_top=True)
+
         return
 
     # This should draw only placed pieces, not empty cells
     def draw_board(self, show_coords=False, show_grid=False):
-        self.clear_canvas()
+        #self.clear_canvas()
         white_pieces = self.game.piece_bank_white
         black_pieces = self.game.piece_bank_black
         # Draw only pieces that are on top and not in bank
@@ -661,11 +715,16 @@ class PygameGUI(UI):
                                         show_coords=show_coords, show_border=True)
 
     def show_canvas(self):
+        self.screen.blit(self.viewport_surface, (self.BANK_WIDTH, 0))
+        self.screen.blit(self.white_bank_surface, (self.screen_width - self.BANK_WIDTH, 0))
+        self.screen.blit(self.black_bank_surface, (0,0))
         pygame.display.flip()
         return
 
     def clear_canvas(self):
         if self.screen is None:
             return
-        self.screen.fill((255, 255, 255))
+        self.viewport_surface.fill((255, 255, 255))
+        self.white_bank_surface.fill((255, 255, 255))
+        self.black_bank_surface.fill((255, 255, 255))
         return

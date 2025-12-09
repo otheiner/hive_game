@@ -141,8 +141,13 @@ class Beetle(Piece):
         level = game_state.get_cell(coord).get_pieces().index(self) + 1
         beetle_cell = game_state.get_cell(coord)
         for neighbor in game_state.get_neighbors(beetle_cell.coord):
+            neighbor_height = len(neighbor.get_pieces())
             if (game_state.freedom_to_move(coord, neighbor.coord, level) and
                 (len(game_state.get_occupied_neighbors(neighbor.coord)) > 1)):
+                possible_moves.append(neighbor)
+            # Allow jumping to the higher level
+            elif (neighbor_height >= level and
+                game_state.freedom_to_move(coord, neighbor.coord, neighbor_height + 1)):
                 possible_moves.append(neighbor)
         return possible_moves
 

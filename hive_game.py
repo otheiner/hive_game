@@ -39,7 +39,8 @@ def main():
     current_player_index = int(not game.white_turn)
     print(f"current_player_index: {current_player_index}")
     print(f"white_turn: {game.white_turn}")
-    ui.draw_board(show_grid=True, show_coords=True)
+    ui.clear_canvas()
+    ui.draw_board(show_coords=False)
     ui.draw_stats()
     ui.draw_piece_banks()
     ui.show_canvas()
@@ -60,9 +61,10 @@ def main():
             if ui.game.winning_state:
                 print(f"Player {player.color} wins!")
                 return
-            ui.draw_board(show_coords=True)
+            ui.clear_canvas()
+            ui.draw_board(show_coords=False)
             ui.draw_stats()
-            #ui.draw_piece_banks()
+            ui.draw_piece_banks()
             if isinstance(ui, MatplotlibGUI) or isinstance(ui, PygameGUI):
                 ui.show_canvas()
             current_player_index = 1 - current_player_index
