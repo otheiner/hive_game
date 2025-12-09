@@ -7,4 +7,4 @@ WIP: This is my Python implementation of Hive board game (https://en.wikipedia.o
 
 The snapshot of the first version of a very simple game display is shown below.
 
-<img src="https://github.com/otheiner/hive_game/blob/main/assets/game_snapshot.png" width="750">
+<img src="https://github.com/otheiner/hive_game/blob/main/assets/game_screenshot.png" width="750">
