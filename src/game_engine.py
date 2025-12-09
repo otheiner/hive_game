@@ -168,9 +168,9 @@ class Game(Board):
     def freedom_to_move(self, coord_from, coord_to, level = 1):
         cell_from = self.get_cell(coord_from)
         cell_to = self.get_cell(coord_to)
-        direction_between_cells = (cell_from.coord.q - cell_to.coord.q,
-                                   cell_from.coord.r - cell_to.coord.r,
-                                   cell_from.coord.s - cell_to.coord.s)
+        direction_between_cells = (cell_to.coord.q - cell_from.coord.q,
+                                   cell_to.coord.r - cell_from.coord.r,
+                                   cell_to.coord.s - cell_from.coord.s)
 
         # Piece is in bank - it can move to any cell (check if the cell on the playable border is not done here)
         if coord_from is None:
@@ -204,13 +204,14 @@ class Game(Board):
         bottleneck_left_cell = self.get_cell(GridCoordinates(cell_from.coord.q + bottleneck_left[0],
                                                              cell_from.coord.r + bottleneck_left[1],
                                                              cell_from.coord.s + bottleneck_left[2]))
-        bottleneck_right_cell = self.get_cell(GridCoordinates(cell_to.coord.q + bottleneck_right[0],
-                                                              cell_to.coord.r + bottleneck_right[1],
-                                                              cell_to.coord.s + bottleneck_right[2]))
+        bottleneck_right_cell = self.get_cell(GridCoordinates(cell_from.coord.q + bottleneck_right[0],
+                                                              cell_from.coord.r + bottleneck_right[1],
+                                                              cell_from.coord.s + bottleneck_right[2]))
+        print(f"From: {cell_from.coord}, to: {cell_to.coord}, L: {bottleneck_left_cell.coord}, R: {bottleneck_right_cell.coord}")
 
         # This can happen when we are at the edge of the game field
         #TODO Let's see if this fixes things or breaks (original line is commented). New rule should make
-        # sure that we are able to reach the other cellby sliding and following the edge.
+        # sure that we are able to reach the other cell by sliding and following the edge.
         if (bottleneck_left_cell is None) or (bottleneck_right_cell is None):
         #if (bottleneck_left_cell is None) != (bottleneck_right_cell is None):
             return True
