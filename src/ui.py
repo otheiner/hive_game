@@ -1,3 +1,4 @@
+import time
 from itertools import dropwhile
 
 import matplotlib.patches as patches
@@ -476,6 +477,7 @@ class PygameGUI(UI):
         print(f"Player color: {player_color}")
         print("Click the start of the move:")
         while not start_cell_selected:
+            time.sleep(0.01)
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     return None

@@ -13,7 +13,7 @@ from src.move import Move
 def main():
     game = Game(30)
     #ui = MatplotlibGUI(game,1.3, 40, 40)
-    ui = PygameGUI(game, 25, 1000, 750)
+    ui = PygameGUI(game, 25, 1200, 750)
     players = [HumanPlayer(Player.PlayerColor.WHITE,ui), HumanPlayer(Player.PlayerColor.BLACK,ui)]
     print(f"n cells: {len(game.cells)}")
 
