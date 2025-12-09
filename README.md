@@ -1,9 +1,12 @@
 # Hive game
+_This project is currently work in progress_
 
-WIP: This is my Python implementation of Hive board game (https://en.wikipedia.org/wiki/Hive_(game)). I have three goals in this project:
+This is my Python implementation of [Hive board game](https://en.wikipedia.org/wiki/Hive_(game)). It is a turn-based game that combines simplicity of tic-tac toe and complexity of a chesss. Each player has several pieces which, once placed, can move around according to their specific movement patterns. The goal of the game is to surround oponents' queen bee by 6 other pieces (pieces can be of either colour).
+
+I have three goals in this project:
   - [x] implement the game
-  - [ ]  write different agents (using different algorithms) which will be able to play the game
-  - [ ] learn some new machine learning techniques when writing these AIs
+  - [ ]  write different agents which will be able to play the game
+  - [ ] learn something new from machine learning (reinforcement learning, GNNs,...)
 
 The screenshot of the game display is shown below.
 
