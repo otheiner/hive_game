@@ -429,24 +429,43 @@ class MatplotlibGUI(UI):
 
         return Move(start_coord, end_coord, selected_piece)
 
+class PieceSprite(pygame.sprite.Sprite):
+    def __init__(self, piece, image, x, y):
+        super().__init__()
+        self.piece = piece
+        self.image = image
+        self.rect = image.get_rect(center=(x, y))
+
+class MouseProxy(pygame.sprite.Sprite):
+    def __init__(self, pos):
+        super().__init__()
+        self.rect = pygame.Rect(pos[0], pos[1], 1, 1)
+
 class PygameGUI(UI):
     def __init__(self, game_state, cell_size = 1,  screen_width = 1000, screen_height = 750):
         super().__init__(game_state, cell_size, canvas_size_x=screen_width, canvas_size_y=screen_height)
         pygame.init()
         self.screen_width = screen_width
         self.screen_height = screen_height
-        self.screen = None
+        self.screen = pygame.display.set_mode((self.screen_width, self.screen_height))
+
         self.BANK_WIDTH = self.screen_width * 0.1
         self.BANK_HEIGHT = self.screen_height
+        self.white_bank_surface = pygame.Surface((self.BANK_WIDTH, self.BANK_HEIGHT))
+        self.black_bank_surface = pygame.Surface((self.BANK_WIDTH, self.BANK_HEIGHT))
+        self.white_bank_surface.fill((255, 255, 255))
+        self.black_bank_surface.fill((255, 255, 255))
+        self.white_bank_rectangle = pygame.Rect(self.screen_width - self.BANK_WIDTH, 0, self.BANK_WIDTH, self.BANK_HEIGHT)
+        self.black_bank_rectangle = pygame.Rect(0, 0, self.BANK_WIDTH, self.BANK_HEIGHT)
+        self.white_bank_sprites = pygame.sprite.Group()
+        self.black_bank_sprites = pygame.sprite.Group()
+
         self.VIEWPORT_WIDTH = self.screen_width - 2 * self.BANK_WIDTH
         self.VIEWPORT_HEIGHT = self.screen_height
         self.viewport_surface = pygame.Surface((self.VIEWPORT_WIDTH, self.VIEWPORT_HEIGHT), pygame.SRCALPHA)
-        self.white_bank_surface = pygame.Surface((self.BANK_WIDTH, self.BANK_HEIGHT))
-        self.black_bank_surface = pygame.Surface((self.BANK_WIDTH, self.BANK_HEIGHT))
-        self.screen = pygame.display.set_mode((self.screen_width, self.screen_height))
         self.viewport_surface.fill((255, 255, 255))
-        self.white_bank_surface.fill((255, 255, 255))
-        self.black_bank_surface.fill((255, 255, 255))
+        self.viewport_rectangle = pygame.Rect(self.BANK_WIDTH, 0, self.VIEWPORT_WIDTH, self.VIEWPORT_HEIGHT)
+
         pygame.display.set_caption("Hive Game")
 
         self.textures = {Texture.TextureType.WHITE_PIECE: pygame.image.load("assets/textures/white_piece.png").convert_alpha(),
@@ -469,15 +488,7 @@ class PygameGUI(UI):
         for key, texture in self.textures.items():
             self.textures[key] = pygame.transform.smoothscale(texture, (0.865*scale, scale))
 
-    # def _ensure_screen(self):
-    #     if self.screen is None:
-    #         self.screen = pygame.display.set_mode((self.screen_width, self.screen_height))
-    #         self.viewport_surface.fill((255, 255, 255))
-    #         self.white_bank_surface.fill((255, 255, 255))
-    #         self.black_bank_surface.fill((255, 255, 255))
-    #     return self.screen
-
-    def handle_click(self, origin_x = None, origin_y = None):
+    def handle_click_on_board(self, origin_x = None, origin_y = None):
         if (origin_x is None) or (origin_y is None):
             origin_x = self.screen_centre_x
             origin_y = self.screen_centre_y
@@ -485,10 +496,8 @@ class PygameGUI(UI):
         x = mx - origin_x
         y = my - origin_y
         q, r, s = self.cartesian_to_cube(x, y)
-        #print("Clicked hex:", q, r)
         return q, r, s
 
-    #FIXME Implement following method
     def wait_for_user_input(self, player_color):
         start_q, start_r, start_s = None, None, None
         end_q, end_r, end_s = None, None, None
@@ -497,25 +506,55 @@ class PygameGUI(UI):
         print(f"Player color: {player_color}")
         print("Click the start of the move:")
         while not start_cell_selected:
-            time.sleep(0.01)
+            time.sleep(0.01)        # This is to save CPU
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     return None
                 if event.type == pygame.MOUSEBUTTONDOWN:
-                    start_q, start_r, start_s = self.handle_click()
-                    print(f"Clicked start cell: {start_q}, {start_r}, {start_s}")
-                    start_cell_selected = True
-
-        start_cell = self.game.get_cell(GridCoordinates(start_q, start_r, start_s))
-        if not start_cell.has_piece():
-            print(f"Select cell with a piece")
-            self.clear_canvas()
-            self.draw_board()
-            self.draw_stats()
-            return self.wait_for_user_input(player_color)
-        piece = start_cell.get_top_piece()
-        print(f"Selected {piece}.")
-        self.draw_cell(start_cell.coord, cell_texture=Texture.TextureType.HIGHLIGHTED_CELL)
+                    mouse_pos = pygame.mouse.get_pos()
+                    if self.white_bank_rectangle.collidepoint(mouse_pos):
+                        clicked_sprite = pygame.sprite.spritecollideany(MouseProxy(mouse_pos),
+                                                                        self.white_bank_sprites)
+                        if clicked_sprite:
+                            piece = clicked_sprite.piece
+                            start_coord = None
+                            print(f"Selected {piece}")
+                            start_cell_selected = True
+                        else:
+                            print(f"Select cell with a piece")
+                            self.clear_canvas()
+                            self.draw_board()
+                            self.draw_stats()
+                            return self.wait_for_user_input(player_color)
+                    elif self.black_bank_rectangle.collidepoint(mouse_pos):
+                        clicked_sprite = pygame.sprite.spritecollideany(MouseProxy(mouse_pos),
+                                                                        self.black_bank_sprites)
+                        if clicked_sprite:
+                            piece = clicked_sprite.piece
+                            start_coord = None
+                            print(f"Selected {piece}")
+                            start_cell_selected = True
+                        else:
+                            print(f"Select cell with a piece")
+                            self.clear_canvas()
+                            self.draw_board()
+                            self.draw_stats()
+                            return self.wait_for_user_input(player_color)
+                    else:
+                        start_q, start_r, start_s = self.handle_click_on_board()
+                        print(f"Clicked start cell: {start_q}, {start_r}, {start_s}")
+                        start_cell = self.game.get_cell(GridCoordinates(start_q, start_r, start_s))
+                        if not start_cell.has_piece():
+                            print(f"Select cell with a piece")
+                            self.clear_canvas()
+                            self.draw_board()
+                            self.draw_stats()
+                            return self.wait_for_user_input(player_color)
+                        piece = start_cell.get_top_piece()
+                        start_coord = start_cell.coord
+                        print(f"Selected {piece}.")
+                        self.draw_cell(start_cell.coord, cell_texture=Texture.TextureType.HIGHLIGHTED_CELL)
+                        start_cell_selected = True
 
         if piece.color == player_color:
             self.show_canvas()
@@ -525,6 +564,7 @@ class PygameGUI(UI):
             self.draw_board()
             self.draw_stats()
             return self.wait_for_user_input(player_color)
+
         possible_moves = piece.get_possible_moves(self.game)
         print(f"Possible moves: {possible_moves}")
         self.draw_cells(possible_moves, cell_texture = Texture.TextureType.SUGGESTED_MOVE)
@@ -537,12 +577,12 @@ class PygameGUI(UI):
                 if event.type == pygame.QUIT:
                     return None
                 if event.type == pygame.MOUSEBUTTONDOWN:
-                    end_q, end_r, end_s = self.handle_click()
+                    end_q, end_r, end_s = self.handle_click_on_board()
                     print(f"Clicked end cell: {end_q}, {end_r}, {end_s}")
                     end_cell_selected = True
-                    #FIXME Ths is for testing - this should return move
 
         end_cell = self.game.get_cell(GridCoordinates(end_q, end_r, end_s))
+        end_coord = end_cell.coord
         if end_cell not in possible_moves:
             print(f"Select only cells from allowed moves.")
             self.draw_board()
@@ -550,7 +590,7 @@ class PygameGUI(UI):
             self.draw_stats()
             return self.wait_for_user_input(player_color)
 
-        return Move(start_cell.coord, end_cell.coord, piece)
+        return Move(start_coord, end_coord, piece)
 
     def draw_cell(self, coord, cell_texture=Texture.TextureType.NO_TEXTURE,
                   show_coords=False, show_border=True):
@@ -675,9 +715,6 @@ class PygameGUI(UI):
         indent_x = self.BANK_WIDTH/2
         indent_y = 0
         piece_separation = self.cell_size * 0.8
-        #bottom_y = self.canvas_size_x * indent_y
-        black_x = -1 * self.canvas_size_x * indent_x
-        white_x = self.canvas_size_x * indent_x
 
         # Draw white bank
         piece_no = 0
@@ -687,6 +724,9 @@ class PygameGUI(UI):
                 self.draw_piece(indent_x, indent_y + piece_no * (self.cell_size + piece_separation),
                                 piece_texture=piece.texture, surface=self.white_bank_surface, center_offset=False,
                                 flat_top=True)
+                sprite = PieceSprite(piece, self.textures[Texture.TextureType.WHITE_PIECE],
+                                     indent_x + (self.screen_width - self.BANK_WIDTH), indent_y + piece_no * (self.cell_size + piece_separation))
+                self.white_bank_sprites.add(sprite)
 
         # Draw black bank
         piece_no = 0
@@ -696,6 +736,9 @@ class PygameGUI(UI):
                 self.draw_piece(indent_x, indent_y + piece_no * (self.cell_size + piece_separation),
                                 piece_texture=piece.texture, surface=self.black_bank_surface, center_offset=False,
                                 flat_top=True)
+                sprite = PieceSprite(piece, self.textures[Texture.TextureType.BLACK_PIECE],
+                                     indent_x, indent_y + piece_no * (self.cell_size + piece_separation))
+                self.black_bank_sprites.add(sprite)
 
         return
 

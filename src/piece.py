@@ -151,6 +151,7 @@ class Beetle(Piece):
                 possible_moves.append(neighbor)
         return possible_moves
 
+#FIXME Doesn't check all adjecent pieces - or it looks like that
 class Mosquito(Piece):
     def __init__(self, colour):
         super().__init__(self.PieceType.MOSQUITTO, colour)
