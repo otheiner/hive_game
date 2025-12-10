@@ -9,7 +9,7 @@ I have a several goals in this project:
     - [x] random agent
     - [ ] minimax
     - [ ] alpha-beta pruning
-    - [ ] suitable NN architecture(s)
+    - [ ] explore suitable NN architecture(s)
   - learn something new from machine learning
     - [ ] reinforcement learning
 
