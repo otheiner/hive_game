@@ -225,13 +225,11 @@ class Spider(Piece):
                     if list(intersection)[0].coord == self.coord:
                         continue
                 if depth == 3 and (empty_neighbor.coord not in visited):
-                    print(f"Adding {start_coord} to possible placements.")
                     possible_placements.add(game_state.get_cell(start_coord))
                 else:
                     if (empty_neighbor.coord not in visited) or (visited[empty_neighbor.coord] > depth):
                         visited[empty_neighbor.coord] = depth
                         self.flood_fill_spider(empty_neighbor.coord, game_state, visited, depth + 1, possible_placements)
-            print(f"Spider possible placements: {possible_placements}")
         return possible_placements
 
 class Ladybug(Piece):

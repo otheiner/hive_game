@@ -5,17 +5,17 @@ from src.ui import PygameGUI
 
 #sys.path.append("src")
 
-from src.game_engine import Game
-from src.player import HumanPlayer, Player
+from src.game_engine import Game, Logbook, Log
+from src.player import HumanPlayer, Player, RandomAIPlayer
 from src.ui import MatplotlibGUI
 from src.move import Move
 
 def main():
     game = Game(30)
     #ui = MatplotlibGUI(game,1.3, 40, 40)
-    ui = PygameGUI(game, 28, 1200, 750)
-    players = [HumanPlayer(Player.PlayerColor.WHITE,ui), HumanPlayer(Player.PlayerColor.BLACK,ui)]
-    print(f"n cells: {len(game.cells)}")
+    ui = PygameGUI(game, 28, 1200, 750, Log.DebugLevel.INFO)
+    #players = [HumanPlayer(Player.PlayerColor.WHITE,ui), HumanPlayer(Player.PlayerColor.BLACK,ui)]
+    players = [HumanPlayer(Player.PlayerColor.WHITE,ui), RandomAIPlayer(Player.PlayerColor.BLACK,ui)]
 
     # This is game for testing
     # ui.game.make_move(Move(None, GridCoordinates(0, 0), ui.game.piece_bank_white["queen"]))
@@ -37,8 +37,6 @@ def main():
     # Not seems a bit counterintuitive (maybe fix it) but correct
     # Player maybe changes when placement is unsuccessful
     current_player_index = int(not game.white_turn)
-    print(f"current_player_index: {current_player_index}")
-    print(f"white_turn: {game.white_turn}")
     ui.clear_canvas()
     ui.draw_board(show_coords=False)
     ui.draw_stats()
@@ -46,20 +44,19 @@ def main():
     ui.show_canvas()
 
     while not game.winning_state:
-        print(f"current_player_index: {current_player_index}")
-        print(f"white_turn: {game.white_turn}")
         player = players[current_player_index]
         if len(game.list_all_possible_moves(player.color)) == 0:
-            print(f"No possible moves for {player.color}. Other player's turn.")
+            ui.game.logs.info(f"No possible moves for {player.color}. Other player's turn.")
             ui.game.update_stats()
             pass
+        if isinstance(ui, MatplotlibGUI) or isinstance(ui, PygameGUI):
+            ui.show_canvas()
         move = player.get_move(game)
         if move is None:
             return
         if ui.game.make_move(move):
-            print(move)
             if ui.game.winning_state:
-                print(f"Player {player.color} wins!")
+                ui.game.logs.info(f"Player {player.color} wins!")
                 return
             ui.clear_canvas()
             ui.draw_board(show_coords=False)
@@ -69,7 +66,7 @@ def main():
                 ui.show_canvas()
             current_player_index = 1 - current_player_index
         else:
-            print(f"Enter move for this player again.")
+            ui.game.logs.info(f"Enter move for this player again.")
 
 if __name__ == "__main__":
     main()

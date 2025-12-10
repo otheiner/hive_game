@@ -16,6 +16,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from src.player import Player
 #from src.player import Player
+from src.game_engine import Log, Logbook
 
 #from player import Player, HumanPlayer, Move
 importlib.reload(cell_lib)
@@ -28,13 +29,29 @@ from src.move import Move
 import pygame
 
 class UI:
-    def __init__(self, game_state, cell_size = 1,  canvas_size_x = 20, canvas_size_y = 20):
+    def __init__(self, game_state, cell_size = 1,  canvas_size_x = 20, canvas_size_y = 20, log_level = Log.DebugLevel.INFO):
         self.game = game_state
+        self.game.logs.log_level = log_level
         self.cell_size = cell_size
         self.canvas_size_x = canvas_size_x
         self.canvas_size_y = canvas_size_y
         self.screen_centre_x = self.canvas_size_x / 2
         self.screen_centre_y = self.canvas_size_y / 2
+
+    def get_all_possible_moves(self):
+        moves = []
+        if self.game.white_turn:
+            piece_bank = self.game.piece_bank_white
+        else:
+            piece_bank = self.game.piece_bank_black
+
+        for piece in piece_bank.values():
+            possible_placements = piece.get_possible_moves(self.game)
+            current_location = piece.coord
+            for placement in possible_placements:
+                move = Move(current_location, placement.coord, piece)
+                moves.append(move)
+        return moves
 
     #This is method that has to be implemented for different UI's
     def draw_cell(self, coord, cell_texture = Texture.TextureType.NO_TEXTURE,
@@ -144,8 +161,8 @@ class UI:
 
 #To display what is drawn, show_canvas() has to be called in this class
 class MatplotlibGUI(UI):
-    def __init__(self, game_state, cell_size = 1,  canvas_size_x = 20, canvas_size_y = 20):
-        super().__init__(game_state, cell_size, canvas_size_x, canvas_size_y)
+    def __init__(self, game_state, cell_size = 1,  canvas_size_x = 20, canvas_size_y = 20, log_level = Log.DebugLevel.INFO):
+        super().__init__(game_state, cell_size, canvas_size_x, canvas_size_y, log_level)
         matplotlib.use("TkAgg")
         plt.ion()
         self.ax = None
@@ -232,8 +249,8 @@ class MatplotlibGUI(UI):
             piece_color = 'turquoise'
             fill_color = black_piece
         else:
-            print(f"Warning: {piece_texture} is unknown, or not implemented in this GUI. "
-                  f"Setting turquoise.")
+            self.game.logs.error(f"{piece_texture} is unknown, or not implemented in this GUI. "
+                                 f"Setting turquoise.")
             fill_color = 'turquoise'
             piece_color = 'turquoise'
 
@@ -329,7 +346,7 @@ class MatplotlibGUI(UI):
     # TODO Think about idea above because the same checks will have to be done for mouse input
     # TODO just type of input will be different but logic will be the same.
     def wait_for_user_input(self, player_color):
-        print(f"----- Player {player_color}, round {self.game.round_counter} -----")
+        self.game.logs.info(f"----- Player {player_color}, round {self.game.round_counter} -----")
 
         #FIXME This import is hotfix - solve circular imports
         from src.player import Player
@@ -340,7 +357,6 @@ class MatplotlibGUI(UI):
             piece_bank = self.game.piece_bank_black
         else:
             raise ValueError(f"Invalid player color: {player_color}")
-        print(f" piece bank: {piece_bank}")
 
         # Enter piece and coordinates to be able to see possible placements
         piece_name = input("Enter name of piece \n(or 'quit' to end game): ")
@@ -361,12 +377,12 @@ class MatplotlibGUI(UI):
                 if coord.lstrip("+-").isdigit():
                     entered_start_coord.append(int(coord))
                 else:
-                    print(f"Invalid starting coordinates. Enter the move again again.")
+                    self.game.logs.error(f"Invalid starting coordinates. Enter the move again again.")
                     return self.wait_for_user_input(player_color)
             if len(entered_start_coord) == 2:
                 start_coord = GridCoordinates(entered_start_coord[0], entered_start_coord[1])
             else:
-                print(f"Staring coordinates need to have two components")
+                self.game.logs.error(f"Staring coordinates need to have two components")
                 return self.wait_for_user_input(player_color)
 
         # Process piece input
@@ -375,13 +391,13 @@ class MatplotlibGUI(UI):
             top_piece = self.game.cells[(start_coord.q, start_coord.r, start_coord.s)].get_top_piece()
             if top_piece is not None:
                 if (top_piece.type == piece_name) and (top_piece.color == player_color):
-                    # TODO I think there is problem with pointers
+                    # TODO I think there might be problem with pointers
                     selected_piece = top_piece
                 else:
-                    print(f"Piece {piece_name} is not at starting coordinates. Enter move again.")
+                    self.game.logs.error(f"Piece {piece_name} is not at starting coordinates. Enter move again.")
                     return self.wait_for_user_input(player_color)
             else:
-                print("There is no piece on given coordinates. Enter move again.")
+                self.game.logs.error("There is no piece on given coordinates. Enter move again.")
                 return self.wait_for_user_input(player_color)
         # If piece is not on board check if it is in piece bank
         else:
@@ -390,13 +406,12 @@ class MatplotlibGUI(UI):
                 if piece.type == piece_name and piece.coord is None:
                     selected_piece = piece
             if selected_piece is None:
-                print(f"Piece {piece_name} not in the bank. Enter the move again.")
+                self.game.logs.error(f"Piece {piece_name} not in the bank. Enter the move again.")
                 return self.wait_for_user_input(player_color)
 
         # Highlight possible moves before picking where to go
         highlighted_cells = selected_piece.get_possible_moves(self.game)
-        print(f"Highlighted cells: {highlighted_cells}")
-        print(f"Cel (1 0): {self.game.get_cell(GridCoordinates(1, 0))}")
+        self.game.logs.debug(f"Highlighted cells: {highlighted_cells}")
         self.draw_board(show_grid=True, show_coords=True)
         self.draw_cells(highlighted_cells, cell_texture = Texture.TextureType.HIGHLIGHTED_CELL)
         self.draw_stats()
@@ -419,12 +434,12 @@ class MatplotlibGUI(UI):
             if coord.lstrip("+-").isdigit():
                 entered_end_coord.append(int(coord))
             else:
-                print(f"Invalid destination coordinates. Enter the move again.")
+                self.game.logs.error(f"Invalid destination coordinates. Enter the move again.")
                 return self.wait_for_user_input(player_color)
         if len(entered_end_coord) == 2:
             end_coord = GridCoordinates(entered_end_coord[0], entered_end_coord[1])
         else:
-            print(f"Destination coordinates need to have two components")
+            self.game.logs.error(f"Destination coordinates need to have two components")
             return self.wait_for_user_input(player_color)
 
         return Move(start_coord, end_coord, selected_piece)
@@ -442,12 +457,17 @@ class MouseProxy(pygame.sprite.Sprite):
         self.rect = pygame.Rect(pos[0], pos[1], 1, 1)
 
 class PygameGUI(UI):
-    def __init__(self, game_state, cell_size = 1,  screen_width = 1000, screen_height = 750):
-        super().__init__(game_state, cell_size, canvas_size_x=screen_width, canvas_size_y=screen_height)
+    def __init__(self, game_state, cell_size = 1,  screen_width = 1000, screen_height = 750, log_level = Log.DebugLevel.INFO):
+        super().__init__(game_state, cell_size, canvas_size_x=screen_width, canvas_size_y=screen_height, log_level=log_level)
         pygame.init()
         self.screen_width = screen_width
         self.screen_height = screen_height
         self.screen = pygame.display.set_mode((self.screen_width, self.screen_height))
+
+        self.MESSANGER_WIDTH = self.screen_width / 2
+        self.MESSANGER_HEIGHT = self.screen_height * 0.15
+        self.messanger_surface = pygame.Surface((self.MESSANGER_WIDTH, self.MESSANGER_HEIGHT))
+        self.messanger_surface.fill((255, 255, 255))
 
         self.BANK_WIDTH = self.screen_width * 0.1
         self.BANK_HEIGHT = self.screen_height
@@ -461,7 +481,7 @@ class PygameGUI(UI):
         self.black_bank_sprites = pygame.sprite.Group()
 
         self.VIEWPORT_WIDTH = self.screen_width - 2 * self.BANK_WIDTH
-        self.VIEWPORT_HEIGHT = self.screen_height
+        self.VIEWPORT_HEIGHT = self.BANK_HEIGHT
         self.viewport_surface = pygame.Surface((self.VIEWPORT_WIDTH, self.VIEWPORT_HEIGHT), pygame.SRCALPHA)
         self.viewport_surface.fill((255, 255, 255))
         self.viewport_rectangle = pygame.Rect(self.BANK_WIDTH, 0, self.VIEWPORT_WIDTH, self.VIEWPORT_HEIGHT)
@@ -503,8 +523,7 @@ class PygameGUI(UI):
         end_q, end_r, end_s = None, None, None
         start_cell_selected = False
         end_cell_selected = False
-        print(f"Player color: {player_color}")
-        print("Click the start of the move:")
+        self.game.logs.info(f"Player {player_color}. Click the start of the move.")
         while not start_cell_selected:
             time.sleep(0.01)        # This is to save CPU
             for event in pygame.event.get():
@@ -518,10 +537,10 @@ class PygameGUI(UI):
                         if clicked_sprite:
                             piece = clicked_sprite.piece
                             start_coord = None
-                            print(f"Selected {piece}")
+                            self.game.logs.info(f"Selected {piece}.")
                             start_cell_selected = True
                         else:
-                            print(f"Select cell with a piece")
+                            self.game.logs.info(f"Select cell with a piece.")
                             self.clear_canvas()
                             self.draw_board()
                             self.draw_stats()
@@ -532,59 +551,59 @@ class PygameGUI(UI):
                         if clicked_sprite:
                             piece = clicked_sprite.piece
                             start_coord = None
-                            print(f"Selected {piece}")
+                            self.game.logs.info(f"Selected {piece}.")
                             start_cell_selected = True
                         else:
-                            print(f"Select cell with a piece")
+                            self.game.logs.info(f"Select cell with a piece.")
                             self.clear_canvas()
                             self.draw_board()
                             self.draw_stats()
                             return self.wait_for_user_input(player_color)
-                    else:
+                    elif self.viewport_rectangle.collidepoint(mouse_pos):
                         start_q, start_r, start_s = self.handle_click_on_board()
-                        print(f"Clicked start cell: {start_q}, {start_r}, {start_s}")
+                        self.game.logs.debug(f"Clicked start cell: {start_q}, {start_r}, {start_s}")
                         start_cell = self.game.get_cell(GridCoordinates(start_q, start_r, start_s))
                         if not start_cell.has_piece():
-                            print(f"Select cell with a piece")
+                            self.game.logs.info(f"Select cell with a piece.")
                             self.clear_canvas()
                             self.draw_board()
                             self.draw_stats()
                             return self.wait_for_user_input(player_color)
                         piece = start_cell.get_top_piece()
                         start_coord = start_cell.coord
-                        print(f"Selected {piece}.")
+                        self.game.logs.info(f"Selected {piece}.")
                         self.draw_cell(start_cell.coord, cell_texture=Texture.TextureType.HIGHLIGHTED_CELL)
                         start_cell_selected = True
 
         if piece.color == player_color:
             self.show_canvas()
         else:
-            print(f"Select piece of {player_color} player.")
+            self.game.logs.info(f"Select {player_color} piece.")
             self.clear_canvas()
             self.draw_board()
             self.draw_stats()
             return self.wait_for_user_input(player_color)
 
         possible_moves = piece.get_possible_moves(self.game)
-        print(f"Possible moves: {possible_moves}")
+        self.game.logs.debug(f"Possible moves: {possible_moves}")
         self.draw_cells(possible_moves, cell_texture = Texture.TextureType.SUGGESTED_MOVE)
         self.draw_piece_banks()
         self.show_canvas()
 
-        print(f"Click end of the move:")
+        self.game.logs.info(f"Click end of the move:")
         while not end_cell_selected:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     return None
                 if event.type == pygame.MOUSEBUTTONDOWN:
                     end_q, end_r, end_s = self.handle_click_on_board()
-                    print(f"Clicked end cell: {end_q}, {end_r}, {end_s}")
+                    self.game.logs.debug(f"Clicked end cell: {end_q}, {end_r}, {end_s}")
                     end_cell_selected = True
 
         end_cell = self.game.get_cell(GridCoordinates(end_q, end_r, end_s))
         end_coord = end_cell.coord
         if end_cell not in possible_moves:
-            print(f"Select only cells from allowed moves.")
+            self.game.logs.info(f"Select only cells from allowed moves.")
             self.draw_board()
             self.draw_piece_banks()
             self.draw_stats()
@@ -677,8 +696,8 @@ class PygameGUI(UI):
             textures_stack.append(self.textures[Texture.TextureType.PILLBUG])
         else:
             textures_stack.append(self.textures[Texture.TextureType.UNKNOWN])
-            print(f"Warning: {piece_texture} is unknown, or not implemented in this GUI. "
-                  f"Setting turquoise.")
+            self.game.logs.warning(f"{piece_texture} is unknown, or not implemented in this GUI. "
+                                   f"Setting turquoise.")
 
         for texture in textures_stack:
             rect = texture.get_rect(center=(draw_x, draw_y))
@@ -756,10 +775,27 @@ class PygameGUI(UI):
                         self.draw_cell(piece.coord, cell_texture=piece.texture,
                                         show_coords=show_coords, show_border=True)
 
+    def update_messanger(self):
+        self.messanger_surface.fill((255, 255, 255))
+        printed_messages = self.game.logs.messages[-5:]
+        line_no = 0
+        for message in printed_messages:
+            font = pygame.font.SysFont("Comic Sans", 12)
+            line = message.__str__()
+            text_surface = font.render(line, True, (0, 0, 0))
+            x = 0.2 * self.MESSANGER_WIDTH
+            y = 0.5 * self.MESSANGER_HEIGHT
+            self.messanger_surface.blit(text_surface, (x, y - line_no * (text_surface.get_height() + 2)))  # 2px spacing
+            line_no += 1
+
+
     def show_canvas(self):
         self.screen.blit(self.viewport_surface, (self.BANK_WIDTH, 0))
         self.screen.blit(self.white_bank_surface, (self.screen_width - self.BANK_WIDTH, 0))
         self.screen.blit(self.black_bank_surface, (0,0))
+        self.update_messanger()
+        self.screen.blit(self.messanger_surface, ((self.screen_width - self.MESSANGER_WIDTH)/2,
+                                                  self.screen_height - 1.1 * self.MESSANGER_HEIGHT))
         pygame.display.flip()
         return
 
@@ -769,4 +805,5 @@ class PygameGUI(UI):
         self.viewport_surface.fill((255, 255, 255))
         self.white_bank_surface.fill((255, 255, 255))
         self.black_bank_surface.fill((255, 255, 255))
+        self.messanger_surface.fill((255, 255, 255))
         return

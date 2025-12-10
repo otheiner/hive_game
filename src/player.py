@@ -1,3 +1,5 @@
+import random
+
 import src.ui as UI
 
 class Player:
@@ -29,3 +31,30 @@ class HumanPlayer(Player):
     def get_move(self, game):
         move = self.ui.wait_for_user_input(self.color)
         return move
+
+class AI(Player):
+    def __init__(self, color, ui):
+        #TODO Add here new AI controlled UIs to following condition
+        if isinstance(ui, UI.MatplotlibGUI) or isinstance(ui, UI.PygameGUI):
+            super().__init__(color, ui)
+        else:
+            raise ValueError(f"AI player cannot use {ui.__class__} UI.")
+
+    def get_move(self, game):
+        return self.select_move(game)
+
+   #Implement this for different AI players
+    def select_move(self, game):
+        raise NotImplementedError()
+
+
+class RandomAIPlayer(AI):
+    def __init__(self, color, ui):
+        super().__init__(color, ui)
+
+    def select_move(self, game):
+        #possible_moves = self.ui.get_all_possible_moves()
+        possible_moves = self.ui.game.list_all_possible_moves(self.color)
+        self.ui.game.logs.debug(f"Possible moves: {possible_moves}")
+        move_number = random.randrange(0, len(possible_moves))
+        return possible_moves[move_number]
