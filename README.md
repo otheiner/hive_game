@@ -1,5 +1,5 @@
 # Hive game 🍯🐝
-_This project is currently work in progress_
+_Disclaimer: This project is currently work in progress_
 
 This is my Python implementation of [Hive board game](https://en.wikipedia.org/wiki/Hive_(game)). It is a turn-based game that combines simplicity of tic-tac toe and complexity of a chesss. Each player has several pieces which, once placed, can move around the board according to their specific movement patterns. The goal of the game is to surround oponents' queen bee by 6 other pieces (pieces can be of either colour).
 
