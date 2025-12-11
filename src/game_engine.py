@@ -162,6 +162,19 @@ class Game(Board):
         if self.white_turn:
             self.round_counter += 1
 
+    def have_common_occupied_neighbor(self, coord1, coord2):
+        neighbors1 = self.get_occupied_neighbors(coord1)
+        neighbors2 = self.get_occupied_neighbors(coord2)
+        if len(set(neighbors1).intersection(set(neighbors2))) > 0 :
+            return True
+        else:
+            return False
+
+    def get_common_neighbors(self, coord1, coord2):
+        neighbors1 = self.get_neighbors(coord1)
+        neighbors2 = self.get_neighbors(coord2)
+        return set(neighbors1).intersection(set(neighbors2))
+
     def get_occupied_cells(self):
         occupied_cells = []
         for cell in self.cells.values():
