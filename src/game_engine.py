@@ -126,15 +126,15 @@ class Game(Board):
 
         self.logs.debug(f"Checking winning state: {self.winning_state}")
 
+        # This would be weird situation, but it would be a draw. Both queens have 6 neighbours.
+        if white_winner and black_winner:
+            return "How did you manage to do this?! This is draw!"
         # White is winner
         if white_winner and not black_winner:
             return "White wins!"
         # Black is winner
         if white_winner and black_winner:
             return "Black wins!"
-        # This would be weird situation, but it would be a draw. Both queens have 6 neighbours.
-        if white_winner and black_winner:
-            return "How did you manage to do this?! This is draw!"
 
         return False
 
@@ -450,13 +450,15 @@ class Game(Board):
         if piece_cell.get_top_piece() != piece:
             return False
 
+        #FIXME This is probably not working or is not used
         # Queen cannot be placed during the first move
         if self.round_counter == 1 and piece.type == Piece.PieceType.QUEEN:
             return False
 
+        #TODO Implement the rule that pieces can't move before the queen was placed
+
         # Queen has to be placed between moves 2 - 4
-        if (piece.type != Piece.PieceType.QUEEN and
-                1 < self.round_counter <= 4):
+        if piece.type != Piece.PieceType.QUEEN and self.round_counter == 4:
             if piece.color == Piece.PieceColour.WHITE and not self.white_queen_placed:
                 self.logs.warning(f"Queen has to be placed until round 4!")
                 return False
@@ -524,7 +526,7 @@ class Game(Board):
                 return True
 
     # This is only low level function - to move pieces use make_move()
-    def _move_piece(self, move):
+    def _move_piece(self, move, update_stats=True):
         current_cell = self.get_cell(move.current_coord)
         new_cell = self.get_cell(move.final_coord)
         #Placing piece on the board
@@ -542,11 +544,18 @@ class Game(Board):
         elif not (current_cell is None) and not (new_cell is None):
             current_cell.remove_piece(move.piece)
             new_cell.add_piece(move.piece)
-            self.update_stats()
+            if update_stats:
+                self.update_stats()
             return True
         else:
             self.logs.error(f"You are trying to do {move} and that is not possible. Coordinates not on board.")
             return False
+
+    # Only works for moves on the board (not moves from the bank). It is intended for testing moves by
+    # individual pieces and for checking of the rules. Not supposed to be used by Player.
+    def _move_piece_backwards(self, move):
+        move_backwards = Move(move.final_coord, move.current_coord, move.piece)
+        return self._move_piece(move_backwards, update_stats=False)
 
     def make_move(self, move):
         #FIXME Fix logic of placing queen between rounds 2-4

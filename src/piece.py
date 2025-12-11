@@ -80,9 +80,6 @@ class Ant(Piece):
     def piece_movement_pattern(self, game_state):
         return self.flood_fill_ant(self.coord, game_state)
 
-    #FIXME Ant can't move from inside of island even if it follows freedom of move rule.
-    # On contrary, when there is cell at the edge of island which is NOT reachable by
-    # freedom of move, ant selects this cell!
     def flood_fill_ant(self, start_coord, game_state, visited=None):
         if visited is None:
             visited = set()
@@ -159,13 +156,19 @@ class Mosquito(Piece):
     def piece_movement_pattern(self, game_state):
         coord = self.coord
         level = game_state.get_cell(coord).get_pieces().index(self) + 1
-        game_copy = copy.deepcopy(game_state)
         new_piece_type = None
+        possible_moves = []
         if len(game_state.get_occupied_neighbors(coord)) == 1:
             if game_state.get_occupied_neighbors(coord)[0].get_top_piece().type == Piece.PieceType.MOSQUITTO:
                 return []
         if level > 1:
             new_piece_type = Beetle(self.color)
+            game_state.get_cell(coord).remove_piece(self)
+            game_state.get_cell(coord).add_piece(new_piece_type)
+            possible_moves = new_piece_type.piece_movement_pattern(game_state)
+            game_state.get_cell(coord).remove_piece(new_piece_type)
+            game_state.get_cell(coord).add_piece(self)
+            return possible_moves
         else:
             for neighbor in game_state.get_occupied_neighbors(coord):
                 top_piece_type = neighbor.get_top_piece().type
@@ -184,61 +187,72 @@ class Mosquito(Piece):
                 elif top_piece_type == Piece.PieceType.PILLBUG:
                     new_piece_type = Pillbug(self.color)
 
-        if new_piece_type is None:
-            return []
-        else:
-            piece = None
-            for p in game_copy.get_cell(coord).get_pieces():
-                if p.type == self.type and p.color == self.color:
-                    piece = p
-            game_copy.get_cell(coord).remove_piece(piece)
-            game_copy.get_cell(coord).add_piece(new_piece_type)
-            return new_piece_type.piece_movement_pattern(game_copy)
+                if new_piece_type is None:
+                    return []
+                else:
+                    game_state.get_cell(coord).remove_piece(self)
+                    game_state.get_cell(coord).add_piece(new_piece_type)
+                    for placement in new_piece_type.piece_movement_pattern(game_state):
+                        if placement not in possible_moves:
+                            possible_moves.append(placement)
+                    game_state.get_cell(coord).remove_piece(new_piece_type)
+                    game_state.get_cell(coord).add_piece(self)
+
+        return possible_moves
 
 class Spider(Piece):
     def __init__(self, colour):
         super().__init__(self.PieceType.SPIDER, colour)
 
     def piece_movement_pattern(self, game_state):
-        return self.flood_fill_spider(self.coord, game_state)
+        return self.dfs_spider(self.coord, game_state)
 
-    def flood_fill_spider(self, start_coord, game_state, visited = None, depth = 0, possible_placements = None):
+    def dfs_spider(self, start_coord, game_state, visited = None, possible_moves=None, depth=0):
         if visited is None:
-            visited = {}
-            visited[start_coord] = depth
-            possible_placements = set()
+            visited = {start_coord : depth}
+            possible_moves = set()
 
-            # Copy gaem and also piece (using copy_move_object) but using only piece copy
-            game_state = copy.deepcopy(game_state)
-            move = Move(self.coord, self.coord, self)
-            move_copy = game_state.copy_move_object(game_state, move)
-            game_state.get_cell(self.coord).remove_piece(move_copy.piece)
-
-        for empty_neighbor in game_state.get_empty_neighbors(start_coord):
-            current_neighbors = game_state.get_occupied_neighbors(start_coord)
-            neighbor_neighbors = game_state.get_occupied_neighbors(empty_neighbor.coord)
-            intersection = set(current_neighbors).intersection(set(neighbor_neighbors))
-            if game_state.freedom_to_move(start_coord, empty_neighbor.coord) and len(intersection) > 0:
-                # This is to make sure that we always follow the island edge and we never
-                # "jump over the bay"
-                if len(intersection) == 1:
-                    if list(intersection)[0].coord == self.coord:
+        if depth == 3:
+            if start_coord not in possible_moves:
+                possible_moves.add(game_state.get_cell(start_coord))
+        if depth < 3:
+            for empty_neighbor in game_state.get_empty_neighbors(start_coord):
+                # Check if the only neighbor isn't the piece - then don't include it to playable border
+                occupied = game_state.get_occupied_neighbors(empty_neighbor.coord)
+                if len(occupied) == 1:
+                    if occupied[0].coord == self.coord:
                         continue
-                if depth == 3 and (empty_neighbor.coord not in visited):
-                    possible_placements.add(game_state.get_cell(start_coord))
-                else:
-                    if (empty_neighbor.coord not in visited) or (visited[empty_neighbor.coord] > depth):
-                        visited[empty_neighbor.coord] = depth
-                        self.flood_fill_spider(empty_neighbor.coord, game_state, visited, depth + 1, possible_placements)
-        return possible_placements
+                if (len(game_state.get_occupied_neighbors(empty_neighbor.coord)) > 0 and
+                    game_state.freedom_to_move(start_coord, empty_neighbor.coord) and
+                    empty_neighbor.coord not in visited.keys()):
+                    visited[empty_neighbor.coord] = depth
+                    self.dfs_spider(empty_neighbor.coord, game_state, visited, possible_moves, depth + 1)
+        return possible_moves
 
 class Ladybug(Piece):
     def __init__(self, colour):
         super().__init__(self.PieceType.LADYBUG, colour)
 
     def piece_movement_pattern(self, game_state):
-        #TODO implement me
-        return
+        return self.dfs_ladybug(self.coord, game_state)
+
+    def dfs_ladybug(self, start_coord, game_state, depth = 0, possible_placements = None, original_piece_coord=None):
+        if possible_placements is None:
+            possible_placements = set()
+            original_piece_coord = self.coord
+
+        if depth == 0 or depth == 1:
+            for neighbor in game_state.get_occupied_neighbors(start_coord):
+                move = Move(start_coord, neighbor.coord, self)
+                game_state._move_piece(move, update_stats=False)
+                self.dfs_ladybug(neighbor.coord, game_state, depth + 1, possible_placements, original_piece_coord)
+                game_state._move_piece_backwards(move)
+        if depth == 2:
+            for neighbor in game_state.get_empty_neighbors(start_coord):
+                if (neighbor not in possible_placements) and (neighbor.coord != original_piece_coord):
+                    possible_placements.add(neighbor)
+
+        return possible_placements
 
 class Pillbug(Piece):
     def __init__(self, colour):
