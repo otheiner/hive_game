@@ -7,7 +7,7 @@ I have a several goals in this project:
   - implement the game
     - [x] implement the game logic
     - [x] write GUI
-    - [x] implement all types of pieces (pillbug will be added lated)
+    - [x] implement all types of pieces (pillbug will be added later)
   - write different agents which will be able to play the game
     - [x] random agent
     - [ ] minimax
