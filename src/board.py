@@ -1,4 +1,3 @@
-import numpy as np
 from src.cell import Cell, GridCoordinates
 
 class Board:

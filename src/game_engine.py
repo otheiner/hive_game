@@ -1,6 +1,5 @@
 import importlib
 from enum import IntEnum
-import numpy as np
 
 import src.board as board_lib
 import src.piece as piece_lib
