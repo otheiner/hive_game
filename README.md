@@ -10,7 +10,7 @@ I have a several goals in this project:
     - [x] implement all types of pieces (pillbug will be added later)
   - write different agents which will be able to play the game
     - [x] random agent
-    - [x] minimax (it is working to depth 3 and is terribly slow)
+    - [x] minimax (this needs to be fixed - it is working to depth 3 and it is terribly slow)
     - [ ] alpha-beta pruning
     - [ ] explore suitable NN architecture(s)
   - learn something new from machine learning
