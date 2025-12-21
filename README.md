@@ -25,7 +25,7 @@ Just clone this repository to your local machine and from inside the main folder
 ```
 python3 hive_game.py
 ```
-This will open the game window and you can play. Have fun!
+This will open the game window and you can play. If you play vs. computer, you are by default white and you start the game. Colour selection will be added to the game menu later. Have fun!
 
 The game doesn't use any unusual packages (*), except ```pygame```, which you might need to install.
 
