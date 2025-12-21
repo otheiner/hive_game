@@ -50,10 +50,10 @@ class Cell():
         return hash(self.coord)
 
     def __repr__(self):
-        return f"Cell {hex(id(self))} coord({self.coord.q}, {self.coord.r}, {self.coord.s})"
+        return f"Cell {hex(id(self))} coord({self.coord.q}, {self.coord.r})"
 
     def print_cell(self):
-        print(f"({self.coord,q}, {self.coord.r}, {self.coord.s}), pieces: {self.pieces}")
+        print(f"({self.coord.q}, {self.coord.r}), pieces: {self.pieces}")
 
     # def coordinates(self):
     #     return self.q, self.r, self.s

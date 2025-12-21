@@ -1,5 +1,4 @@
 import time
-from itertools import dropwhile
 
 import matplotlib.patches as patches
 import matplotlib.colors as mcolors
@@ -15,10 +14,8 @@ import src.texture as texture_lib
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from src.player import Player
-#from src.player import Player
 from src.game_engine import Log, Logbook
 
-#from player import Player, HumanPlayer, Move
 importlib.reload(cell_lib)
 importlib.reload(piece_lib)
 importlib.reload(board_lib)
@@ -41,9 +38,9 @@ class UI:
     def get_all_possible_moves(self):
         moves = []
         if self.game.white_turn:
-            piece_bank = self.game.piece_bank_white
+            piece_bank = self.game.piece_bank["white"]
         else:
-            piece_bank = self.game.piece_bank_black
+            piece_bank = self.game.piece_bank["black"]
 
         for piece in piece_bank.values():
             possible_placements = piece.get_possible_moves(self.game)
@@ -69,6 +66,9 @@ class UI:
 
     # This is method that has to be implemented for different UI's
     def draw_piece_banks(self):
+        raise NotImplementedError
+
+    def game_setup(self):
         raise NotImplementedError
 
     def draw_cells(self, cells, cell_texture = Texture.TextureType.NO_TEXTURE, show_grid = False):
@@ -300,7 +300,7 @@ class MatplotlibGUI(UI):
 
         #Draw white bank
         piece_no = 0
-        for piece in self.game.piece_bank_white.values():
+        for piece in self.game.piece_bank["white"].values():
             piece_no += 1
             if piece.coord is None:
                 self.draw_piece(white_x, bottom_y + piece_no*(self.cell_size + piece_separation),
@@ -308,7 +308,7 @@ class MatplotlibGUI(UI):
 
         #Draw black bank
         piece_no = 0
-        for piece in self.game.piece_bank_black.values():
+        for piece in self.game.piece_bank["black"].values():
             piece_no += 1
             if piece.coord is None:
                 self.draw_piece(black_x, bottom_y + piece_no*(self.cell_size + piece_separation),
@@ -352,9 +352,9 @@ class MatplotlibGUI(UI):
         from src.player import Player
 
         if player_color == Player.PlayerColor.WHITE:
-            piece_bank = self.game.piece_bank_white
+            piece_bank = self.game.piece_bank["white"]
         elif player_color == Player.PlayerColor.BLACK:
-            piece_bank = self.game.piece_bank_black
+            piece_bank = self.game.piece_bank["black"]
         else:
             raise ValueError(f"Invalid player color: {player_color}")
 
@@ -444,18 +444,6 @@ class MatplotlibGUI(UI):
 
         return Move(start_coord, end_coord, selected_piece)
 
-class PieceSprite(pygame.sprite.Sprite):
-    def __init__(self, piece, image, x, y):
-        super().__init__()
-        self.piece = piece
-        self.image = image
-        self.rect = image.get_rect(center=(x, y))
-
-class MouseProxy(pygame.sprite.Sprite):
-    def __init__(self, pos):
-        super().__init__()
-        self.rect = pygame.Rect(pos[0], pos[1], 1, 1)
-
 class PygameGUI(UI):
     def __init__(self, game_state, cell_size = 1,  screen_width = 1000, screen_height = 750, log_level = Log.DebugLevel.INFO):
         super().__init__(game_state, cell_size, canvas_size_x=screen_width, canvas_size_y=screen_height, log_level=log_level)
@@ -518,9 +506,14 @@ class PygameGUI(UI):
         q, r, s = self.cartesian_to_cube(x, y)
         return q, r, s
 
+    class MouseProxy(pygame.sprite.Sprite):
+        def __init__(self, pos):
+            super().__init__()
+            self.rect = pygame.Rect(pos[0], pos[1], 1, 1)
+
     def wait_for_user_input(self, player_color):
-        start_q, start_r, start_s = None, None, None
-        end_q, end_r, end_s = None, None, None
+        # start_q, start_r, start_s = None, None, None
+        # end_q, end_r, end_s = None, None, None
         start_cell_selected = False
         end_cell_selected = False
         self.game.logs.info(f"Player {player_color}. Click the start of the move.")
@@ -532,7 +525,7 @@ class PygameGUI(UI):
                 if event.type == pygame.MOUSEBUTTONDOWN:
                     mouse_pos = pygame.mouse.get_pos()
                     if self.white_bank_rectangle.collidepoint(mouse_pos):
-                        clicked_sprite = pygame.sprite.spritecollideany(MouseProxy(mouse_pos),
+                        clicked_sprite = pygame.sprite.spritecollideany(self.MouseProxy(mouse_pos),
                                                                         self.white_bank_sprites)
                         if clicked_sprite:
                             piece = clicked_sprite.piece
@@ -546,7 +539,7 @@ class PygameGUI(UI):
                             self.draw_stats()
                             return self.wait_for_user_input(player_color)
                     elif self.black_bank_rectangle.collidepoint(mouse_pos):
-                        clicked_sprite = pygame.sprite.spritecollideany(MouseProxy(mouse_pos),
+                        clicked_sprite = pygame.sprite.spritecollideany(self.MouseProxy(mouse_pos),
                                                                         self.black_bank_sprites)
                         if clicked_sprite:
                             piece = clicked_sprite.piece
@@ -584,7 +577,15 @@ class PygameGUI(UI):
             self.draw_stats()
             return self.wait_for_user_input(player_color)
 
-        possible_moves = piece.get_possible_moves(self.game)
+        possible_moves = []
+        all_moves = self.game.list_all_possible_moves(player_color)
+        for move in all_moves:
+            if move.piece == piece:
+                possible_moves.append(self.game.get_cell(move.final_coord))
+
+        if len(self.game.get_occupied_cells()) == 0:
+            possible_moves.append(self.game.get_cell(GridCoordinates(0, 0)))
+
         self.game.logs.debug(f"Possible moves: {possible_moves}")
         self.draw_cells(possible_moves, cell_texture = Texture.TextureType.SUGGESTED_MOVE)
         self.draw_piece_banks()
@@ -729,7 +730,13 @@ class PygameGUI(UI):
         r, g, b, a = rgba
         return int(r * 255), int(g * 255), int(b * 255), int(a * 255)
 
-    #FIXME This has to be implemented
+    class PieceSprite(pygame.sprite.Sprite):
+        def __init__(self, piece, image, x, y):
+            super().__init__()
+            self.piece = piece
+            self.image = image
+            self.rect = image.get_rect(center=(x, y))
+
     def draw_piece_banks(self):
         indent_x = self.BANK_WIDTH/2
         indent_y = 0
@@ -737,25 +744,25 @@ class PygameGUI(UI):
 
         # Draw white bank
         piece_no = 0
-        for piece in self.game.piece_bank_white.values():
+        for piece in self.game.piece_bank["white"].values():
             piece_no += 1
             if piece.coord is None:
                 self.draw_piece(indent_x, indent_y + piece_no * (self.cell_size + piece_separation),
                                 piece_texture=piece.texture, surface=self.white_bank_surface, center_offset=False,
                                 flat_top=True)
-                sprite = PieceSprite(piece, self.textures[Texture.TextureType.WHITE_PIECE],
+                sprite = self.PieceSprite(piece, self.textures[Texture.TextureType.WHITE_PIECE],
                                      indent_x + (self.screen_width - self.BANK_WIDTH), indent_y + piece_no * (self.cell_size + piece_separation))
                 self.white_bank_sprites.add(sprite)
 
         # Draw black bank
         piece_no = 0
-        for piece in self.game.piece_bank_black.values():
+        for piece in self.game.piece_bank["black"].values():
             piece_no += 1
             if piece.coord is None:
                 self.draw_piece(indent_x, indent_y + piece_no * (self.cell_size + piece_separation),
                                 piece_texture=piece.texture, surface=self.black_bank_surface, center_offset=False,
                                 flat_top=True)
-                sprite = PieceSprite(piece, self.textures[Texture.TextureType.BLACK_PIECE],
+                sprite = self.PieceSprite(piece, self.textures[Texture.TextureType.BLACK_PIECE],
                                      indent_x, indent_y + piece_no * (self.cell_size + piece_separation))
                 self.black_bank_sprites.add(sprite)
 
@@ -764,8 +771,8 @@ class PygameGUI(UI):
     # This should draw only placed pieces, not empty cells
     def draw_board(self, show_coords=False, show_grid=False):
         #self.clear_canvas()
-        white_pieces = self.game.piece_bank_white
-        black_pieces = self.game.piece_bank_black
+        white_pieces = self.game.piece_bank["white"]
+        black_pieces = self.game.piece_bank["black"]
         # Draw only pieces that are on top and not in bank
         for bank in (white_pieces, black_pieces):
             for piece in bank.values():
@@ -807,3 +814,68 @@ class PygameGUI(UI):
         self.black_bank_surface.fill((255, 255, 255))
         self.messanger_surface.fill((255, 255, 255))
         return
+
+    # TODO This is veeeery ugly - fix me
+    def game_setup(self):
+        class Button(pygame.sprite.Sprite):
+            def __init__(self, text, pos, font, color, hover_color):
+                super().__init__()
+                self.font = font
+                self.text = text
+                self.color = color
+                self.hover_color = hover_color
+                self.image = self.font.render(text, True, color)
+                self.rect = self.image.get_rect(center=pos)
+
+            def update(self, mouse_pos):
+                if self.rect.collidepoint(mouse_pos):
+                    self.image = self.font.render(self.text, True, self.hover_color)
+                else:
+                    self.image = self.font.render(self.text, True, self.color)
+
+        running = True
+        buttons = pygame.sprite.Group()
+        buttons.add(Button("You vs. Random AI", (self.screen_width/2, self.screen_height/6), pygame.font.SysFont("Comic Sans", 30), (0, 0, 0), (255, 0, 0)))
+        buttons.add(Button("You vs. Minimax", (self.screen_width/2, 3*self.screen_height/6), pygame.font.SysFont("Comic Sans", 30), (0, 0, 0), (255, 0, 0)))
+        buttons.add(Button("Two Players", (self.screen_width/2, 5*self.screen_height/6), pygame.font.SysFont("Comic Sans", 30), (0, 0, 0), (255, 0, 0)))
+
+        while running:
+            time.sleep(0.01)
+            self.screen.fill((255, 255, 255))
+            mouse_pos = pygame.mouse.get_pos()
+
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    return -1
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                    for button in buttons:
+                        if button.rect.collidepoint(mouse_pos):
+                            if button.text == "You vs. Random AI":
+                                option = 1
+                                running = False
+                            elif button.text == "You vs. Minimax":
+                                option = 2
+                                running = False
+                            elif button.text == "Two Players":
+                                option = 3
+                                running = False
+
+            buttons.update(mouse_pos)
+            buttons.draw(self.screen)
+            pygame.display.flip()
+
+        self.screen.fill((255,255,255))
+        return option
+
+    #TODO This is veeeery ugly - fix me
+    def show_message(self, message):
+        font = pygame.font.SysFont("Comic Sans", 60)
+        text_surface = font.render(message, True, (255, 0, 0))
+        self.screen.blit(text_surface, (0.3*self.screen_width, self.screen_height/2))
+        pygame.display.flip()
+
+        while True:
+            time.sleep(0.01)
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    return

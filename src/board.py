@@ -11,7 +11,6 @@ class Board:
         (0, -1, +1),
         (+1, -1, 0)]
 
-    #TODO Maybe it is possible to represent board using sparse matrices
     def __init__(self, halfwidth):
         self.halfwidth = halfwidth
         self.board_size = 2 * self.halfwidth + 1

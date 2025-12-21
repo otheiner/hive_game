@@ -65,10 +65,7 @@ class Piece:
         if coord is None:
             return game_state.get_possible_placements(self)
         else:
-            if not game_state.piece_movable(self):
-                return []
-            else:
-                return self.piece_movement_pattern(game_state)
+            return self.piece_movement_pattern(game_state)
 
 class Ant(Piece):
     def __init__(self, colour):
@@ -99,19 +96,8 @@ class Queen(Piece):
     def __init__(self, colour):
         super().__init__(self.PieceType.QUEEN, colour)
 
-    # def piece_movement_pattern(self, game_state):
-    #     coord = self.coord
-    #     possible_moves = []
-    #     queen_cell = game_state.get_cell(coord)
-    #     empty_queen_neighbors = game_state.get_empty_neighbors(queen_cell.coord)
-    #     occupied_neighbors = game_state.get_occupied_neighbors(queen_cell.coord)
-    #     for neighbor in occupied_neighbors:
-    #         empty_neighbor_of_occupied_neighbor = game_state.get_empty_neighbors(neighbor.coord)
-    #
-    #         for placement in set(empty_queen_neighbors).intersection(set(empty_neighbor_of_occupied_neighbor)):
-    #             if placement not in possible_moves:
-    #                 possible_moves.append(placement)
-    #     return possible_moves
+    def occupied_neighbors(self, game_state):
+        return len(game_state.get_occupied_neighbors(self.coord))
 
     def piece_movement_pattern(self, game_state):
         coord = self.coord
@@ -120,8 +106,8 @@ class Queen(Piece):
         empty_queen_neighbors = game_state.get_empty_neighbors(queen_cell.coord)
         for neighbor in empty_queen_neighbors:
             if ((neighbor not in possible_moves) and
-                game_state.freedom_to_move(coord, neighbor.coord) and
-                game_state.have_common_occupied_neighbor(coord, neighbor.coord)):
+                game_state.have_common_occupied_neighbor(coord, neighbor.coord) and
+                game_state.freedom_to_move(coord, neighbor.coord)):
                 possible_moves.append(neighbor)
         return possible_moves
 
@@ -140,6 +126,8 @@ class Grasshopper(Piece):
             possible_placements.append(game_state.get_cell(new_coord))
         return possible_placements
 
+#FIXME This is not working well when  beetle is on top of stack and should move
+# on to of stack on opponent's piece - I don't know why
 class Beetle(Piece):
     def __init__(self, colour):
         super().__init__(self.PieceType.BEETLE, colour)
@@ -148,6 +136,7 @@ class Beetle(Piece):
         coord = self.coord
         possible_moves = []
         # levels indexed from 1, level 0 is empty cell
+        #TODO Not sure if there shouldn't be + 2
         level = game_state.get_cell(coord).get_pieces().index(self) + 1
         beetle_cell = game_state.get_cell(coord)
         for neighbor in game_state.get_neighbors(beetle_cell.coord):
@@ -232,7 +221,7 @@ class Spider(Piece):
                 if (game_state.have_common_occupied_neighbor(start_coord, empty_neighbor.coord) and
                     game_state.freedom_to_move(start_coord, empty_neighbor.coord)):
                     move = Move(start_coord, empty_neighbor.coord, self)
-                    game_state._move_piece(move, update_stats=False)
+                    game_state._move_piece(move, testing=True)
 
                     if empty_neighbor.coord not in visited.keys():
                         visited[empty_neighbor.coord] = depth
@@ -241,29 +230,6 @@ class Spider(Piece):
 
                     game_state._move_piece_backwards(move)
         return possible_moves
-
-    # def dfs_spider(self, start_coord, game_state, visited = None, possible_moves=None, depth=0):
-    #     if visited is None:
-    #         visited = {start_coord : depth}
-    #         possible_moves = set()
-    #
-    #     if depth == 3:
-    #         if start_coord not in possible_moves:
-    #             possible_moves.add(game_state.get_cell(start_coord))
-    #     if depth < 3:
-    #         for empty_neighbor in game_state.get_empty_neighbors(start_coord):
-    #             # Check if the only neighbor isn't the piece - then don't include it to playable border
-    #             occupied = game_state.get_occupied_neighbors(empty_neighbor.coord)
-    #             if len(occupied) == 1:
-    #                 if occupied[0].coord == self.coord:
-    #                     continue
-    #             if (len(game_state.get_occupied_neighbors(empty_neighbor.coord)) > 0 and
-    #                 game_state.freedom_to_move(start_coord, empty_neighbor.coord) and
-    #                 game_state.have_common_occupied_neighbor(empty_neighbor.coord, start_coord) and
-    #                 empty_neighbor.coord not in visited.keys()):
-    #                 visited[empty_neighbor.coord] = depth
-    #                 self.dfs_spider(empty_neighbor.coord, game_state, visited, possible_moves, depth + 1)
-    #     return possible_moves
 
 class Ladybug(Piece):
     def __init__(self, colour):
@@ -280,7 +246,7 @@ class Ladybug(Piece):
         if depth == 0 or depth == 1:
             for neighbor in game_state.get_occupied_neighbors(start_coord):
                 move = Move(start_coord, neighbor.coord, self)
-                game_state._move_piece(move, update_stats=False)
+                game_state._move_piece(move, testing=True)
                 self.dfs_ladybug(neighbor.coord, game_state, depth + 1, possible_placements, original_piece_coord)
                 game_state._move_piece_backwards(move)
         if depth == 2:

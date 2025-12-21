@@ -1,5 +1,6 @@
 import importlib
 from enum import IntEnum
+import numpy as np
 
 import src.board as board_lib
 import src.piece as piece_lib
@@ -10,7 +11,7 @@ importlib.reload(board_lib)
 importlib.reload(piece_lib)
 from src.board import Board
 from src.piece import Piece, Ant, Queen, Spider, Grasshopper, Beetle, Mosquito, Ladybug
-import copy
+
 
 class Log():
     class DebugLevel(IntEnum):
@@ -76,34 +77,36 @@ class Game(Board):
         self.white_queen_placed = False
         self.black_queen_placed = False
         self.round_counter = 1
-        self.piece_bank_white = {"queen" : Queen(Piece.PieceColour.WHITE),
-                                 "spider1" : Spider(Piece.PieceColour.WHITE),
-                                 "spider2": Spider(Piece.PieceColour.WHITE),
-                                 "beetle1" : Beetle(Piece.PieceColour.WHITE),
-                                 "beetle2" : Beetle(Piece.PieceColour.WHITE),
-                                 "grasshopper1" : Grasshopper(Piece.PieceColour.WHITE),
-                                 "grasshopper2" : Grasshopper(Piece.PieceColour.WHITE),
-                                 "grasshopper3" : Grasshopper(Piece.PieceColour.WHITE),
-                                 "ant1" : Ant(Piece.PieceColour.WHITE),
-                                 "ant2" : Ant(Piece.PieceColour.WHITE),
-                                 "ant3" : Ant(Piece.PieceColour.WHITE),
-                                 "mosquito" : Mosquito(Piece.PieceColour.WHITE),
-                                 "ladybug" : Ladybug(Piece.PieceColour.WHITE)
-                                 }
-        self.piece_bank_black = {"queen" :Queen(Piece.PieceColour.BLACK),
-                                 "spider1" :Spider(Piece.PieceColour.BLACK),
-                                 "spider2" :Spider(Piece.PieceColour.BLACK),
-                                 "beetle1" : Beetle(Piece.PieceColour.BLACK),
-                                 "beetle2" : Beetle(Piece.PieceColour.BLACK),
-                                 "grasshopper1" : Grasshopper(Piece.PieceColour.BLACK),
-                                 "grasshopper2" : Grasshopper(Piece.PieceColour.BLACK),
-                                 "grasshopper3" : Grasshopper(Piece.PieceColour.BLACK),
-                                 "ant1" : Ant(Piece.PieceColour.BLACK),
-                                 "ant2" : Ant(Piece.PieceColour.BLACK),
-                                 "ant3" : Ant(Piece.PieceColour.BLACK),
-                                 "mosquito" : Mosquito(Piece.PieceColour.BLACK),
-                                 "ladybug" : Ladybug(Piece.PieceColour.BLACK)
-                                 }
+        # self.bridges_in_current_state = set()
+        self.piece_bank = { "white": {"queen": Queen(Piece.PieceColour.WHITE),
+                                     "spider1": Spider(Piece.PieceColour.WHITE),
+                                     "spider2": Spider(Piece.PieceColour.WHITE),
+                                     "beetle1": Beetle(Piece.PieceColour.WHITE),
+                                     "beetle2": Beetle(Piece.PieceColour.WHITE),
+                                     "grasshopper1": Grasshopper(Piece.PieceColour.WHITE),
+                                     "grasshopper2": Grasshopper(Piece.PieceColour.WHITE),
+                                     "grasshopper3": Grasshopper(Piece.PieceColour.WHITE),
+                                     "ant1": Ant(Piece.PieceColour.WHITE),
+                                     "ant2": Ant(Piece.PieceColour.WHITE),
+                                     "ant3": Ant(Piece.PieceColour.WHITE),
+                                     "mosquito": Mosquito(Piece.PieceColour.WHITE),
+                                     "ladybug": Ladybug(Piece.PieceColour.WHITE)
+                                     },
+                            "black" : {"queen": Queen(Piece.PieceColour.BLACK),
+                                     "spider1": Spider(Piece.PieceColour.BLACK),
+                                     "spider2": Spider(Piece.PieceColour.BLACK),
+                                     "beetle1": Beetle(Piece.PieceColour.BLACK),
+                                     "beetle2": Beetle(Piece.PieceColour.BLACK),
+                                     "grasshopper1": Grasshopper(Piece.PieceColour.BLACK),
+                                     "grasshopper2": Grasshopper(Piece.PieceColour.BLACK),
+                                     "grasshopper3": Grasshopper(Piece.PieceColour.BLACK),
+                                     "ant1": Ant(Piece.PieceColour.BLACK),
+                                     "ant2": Ant(Piece.PieceColour.BLACK),
+                                     "ant3": Ant(Piece.PieceColour.BLACK),
+                                     "mosquito": Mosquito(Piece.PieceColour.BLACK),
+                                     "ladybug": Ladybug(Piece.PieceColour.BLACK)
+                                     }
+                            }
 
     @staticmethod
     def print_cells(cells):
@@ -111,8 +114,8 @@ class Game(Board):
             cell.print_cell()
 
     def check_win(self):
-        white_queen_coord = self.piece_bank_white["queen"].coord
-        black_queen_coord = self.piece_bank_black["queen"].coord
+        white_queen_coord = self.piece_bank["white"]["queen"].coord
+        black_queen_coord = self.piece_bank["black"]["queen"].coord
         self.logs.debug(f"White queen neighbours: {self.get_occupied_neighbors(white_queen_coord)}")
         self.logs.debug(f"Black queen neighbours: {self.get_occupied_neighbors(white_queen_coord)}")
         white_winner = False
@@ -140,9 +143,9 @@ class Game(Board):
 
     def get_piece_bank(self, piece_color):
         if piece_color == Piece.PieceColour.BLACK:
-            return self.piece_bank_black
+            return self.piece_bank["black"]
         elif piece_color == Piece.PieceColour.WHITE:
-            return self.piece_bank_white
+            return self.piece_bank["white"]
         else:
             raise ValueError(f"Piece has some weird colour - should be BLACK or WHITE")
 
@@ -157,10 +160,15 @@ class Game(Board):
                 neighbors.append(cell)
         return neighbors
 
-    def update_stats(self):
+    def update_stats(self, backwards=False):
         self.white_turn = not self.white_turn
-        if self.white_turn:
-            self.round_counter += 1
+        #self.find_bridges()
+        if not backwards:
+            if self.white_turn:
+                self.round_counter += 1
+        else:
+            if not self.white_turn:
+                self.round_counter -= 1
 
     def have_common_occupied_neighbor(self, coord1, coord2):
         neighbors1 = self.get_occupied_neighbors(coord1)
@@ -227,9 +235,25 @@ class Game(Board):
                 self.get_connected_cells_with_distances(neighbour.coord, visited, origin_coord)
         return visited
 
+    def is_piece_on_top(self, piece):
+        piece_cell = self.get_cell(piece.coord)
+        if piece_cell.get_top_piece() == piece:
+            return True
+        else:
+            return False
+
+    def piece_can_be_lifted(self,piece):
+        piece_coord = piece.coord
+        self.get_cell(piece.coord).remove_piece(piece)
+        if self.is_valid_state():
+            state_is_valid = True
+        else:
+            state_is_valid = False
+        self.get_cell(piece_coord).add_piece(piece)
+        return state_is_valid
+
     def is_valid_state(self):
         occupied_cells = self.get_occupied_cells()
-        #print(occupied_cells)
         if len(occupied_cells) == len(self.get_connected_cells(occupied_cells[0].coord)):
             return True
         else:
@@ -285,6 +309,8 @@ class Game(Board):
         # sure that we are able to reach the other cell by sliding and following the edge.
         if (bottleneck_left_cell is None) or (bottleneck_right_cell is None):
         #if (bottleneck_left_cell is None) != (bottleneck_right_cell is None):
+            return True
+        if bottleneck_left_cell.has_piece != bottleneck_left_cell.has_piece:
             return True
         if (len(bottleneck_left_cell.get_pieces()) < level or
             len(bottleneck_right_cell.get_pieces()) < level):
@@ -347,29 +373,29 @@ class Game(Board):
             else:
                 return flood_fill_outer_border(empty_cell_on_outer_border.coord)
 
-    def get_playable_border(self, coord):
-        playable_border = self.get_outer_border(require_freedom_to_move=True)
-        empty_neighbors = self.get_empty_neighbors(coord)
-        border_reachable = False
-        # Playable border for piece in bank is outer border with freedom to move rule
-        if coord is None:
-            return playable_border
-        #FIXME This shouldn't be probably here and it should be managed by each piece by doing
-        # flood fill and checking if they can move to the next cell.
-        for neighbor in empty_neighbors:
-            if neighbor in playable_border:
-                # Remove cells that would end up having no occupied neighbor after moving the piece
-                if len(self.get_occupied_neighbors(neighbor.coord)) == 1:
-                    playable_border.remove(neighbor)
-                # Check that we can reach playable border and not violate freedom to move rule
-                else:
-                    if self.freedom_to_move(coord, neighbor.coord):
-                        border_reachable = True
-
-        if border_reachable:
-            return playable_border
-        else:
-            return []
+    # def get_playable_border(self, coord):
+    #     playable_border = self.get_outer_border(require_freedom_to_move=True)
+    #     empty_neighbors = self.get_empty_neighbors(coord)
+    #     border_reachable = False
+    #     # Playable border for piece in bank is outer border with freedom to move rule
+    #     if coord is None:
+    #         return playable_border
+    #     #FIXME This shouldn't be probably here and it should be managed by each piece by doing
+    #     # flood fill and checking if they can move to the next cell.
+    #     for neighbor in empty_neighbors:
+    #         if neighbor in playable_border:
+    #             # Remove cells that would end up having no occupied neighbor after moving the piece
+    #             if len(self.get_occupied_neighbors(neighbor.coord)) == 1:
+    #                 playable_border.remove(neighbor)
+    #             # Check that we can reach playable border and not violate freedom to move rule
+    #             else:
+    #                 if self.freedom_to_move(coord, neighbor.coord):
+    #                     border_reachable = True
+    #
+    #     if border_reachable:
+    #         return playable_border
+    #     else:
+    #         return []
 
     def has_neighbours_of_same_color(self, coord, piece):
         neighbours = self.get_occupied_neighbors(coord)
@@ -388,16 +414,11 @@ class Game(Board):
         # Any other move
         else:
             possible_placements = []
-            piece_color = piece.color
-            playable_border = self.get_playable_border(None)
-            for cell in playable_border:
-                occupied_neighbours = self.get_occupied_neighbors(cell.coord)
-                include_cell = True
-                for occupied_neighbour in occupied_neighbours:
-                    if occupied_neighbour.get_top_piece().color != piece_color:
-                        include_cell = False
-                if include_cell:
-                    possible_placements.append(cell)
+            for tested_piece in self.get_piece_bank(piece.color).values():
+                for neighbor in self.get_empty_neighbors(tested_piece.coord):
+                    if self.has_neighbours_of_same_color(neighbor.coord, tested_piece):
+                        if neighbor not in possible_placements:
+                            possible_placements.append(neighbor)
             return possible_placements
 
     def is_placement_legal(self,coord, piece):
@@ -433,6 +454,9 @@ class Game(Board):
                 (not self.black_queen_placed) and (self.round_counter == 4)):
             self.logs.warning(f"Queen has to be placed in first four moves. Place queen.")
             return False
+        if (piece.type == Piece.PieceType.QUEEN) and (self.round_counter == 1):
+            self.logs.warning(f"Queen Cannot be placed in the first move.")
+            return False
         return True
 
     # In case make copy of a game object, and we want to be able to retrieve
@@ -459,6 +483,14 @@ class Game(Board):
     def piece_movable(self, piece):
         coord = piece.coord
         piece_cell = self.get_cell(coord)
+
+        # If piece in bank, check if it can be placed somewhere on the board
+        if coord is None:
+            if len(self.get_possible_placements(piece)) == 0:
+                return False
+            else:
+                return True
+
         # Check if piece is on top of the cell stack
         if piece_cell.get_top_piece() != piece:
             return False
@@ -469,13 +501,16 @@ class Game(Board):
             return False
 
         #TODO Implement the rule that pieces can't move before the queen was placed
+        # queen_placed = self.white_queen_placed if self.white_turn else self.black_queen_placed
+        # if not queen_placed and self.round_counter<=4:
+        #     return False
 
         # Queen has to be placed between moves 2 - 4
-        if piece.type != Piece.PieceType.QUEEN and self.round_counter == 4:
-            if piece.color == Piece.PieceColour.WHITE and not self.white_queen_placed:
+        if piece.type != Piece.PieceType.QUEEN and self.round_counter <= 4:
+            if self.white_turn and not self.white_queen_placed:
                 self.logs.warning(f"Queen has to be placed until round 4!")
                 return False
-            if piece.color == Piece.PieceColour.BLACK and not self.black_queen_placed:
+            if not self.white_turn and not self.black_queen_placed:
                 self.logs.warning(f"Queen has to be placed until round 4!")
                 return False
 
@@ -488,76 +523,34 @@ class Game(Board):
 
         return valid_state
 
-    def is_move_legal(self, move):
-        # If current coord is none, take piece from the bank and try placing it
-        if move.current_coord is None:
-            return self.is_placement_legal(move.final_coord, move.piece)
-        else:
-            # Check if the piece is on the top of the cell
-            top_piece = self.get_cell(move.current_coord).get_top_piece()
-            current_cell = self.get_cell(move.current_coord)
-            if current_cell is None:
-                self.logs.error(f"Coordinates {move.current_coord} are not on the board.")
-                return False
-            if top_piece != move.piece:
-                self.logs.warning(f"{move.piece.type} is not at cell {current_cell.coord} or "
-                                  f"is not at the top of the cell.")
-                return False
-
-            new_cell = self.get_cell(move.final_coord)
-            if new_cell is None:
-                self.logs.error(f"Coordinates {move.final_coord} are not on the board.")
-                return False
-            # Check if the move follows movement rules of the piece
-            if not new_cell in move.piece.get_possible_moves(self):
-                self.logs.warning(f"{move.piece.type} at cell {move.current_coord} cannot move to cell "
-                                  f"{move.final_coord}. This would violate movement pattern.")
-                return False
-
-            # Check if movement doesn't result in disconnected island
-            self._move_piece(move, update_stats=False)
-            if not self.is_valid_state():
-                self.logs.warning(f"{move.piece.type} at cell {move.current_coord} cannot move to cell "
-                                  f"{move.final_coord}. This would result in disconnect island.")
-                return False
-
-            # By removing the piece completely we check if the island doesn't get disconnected during the move
-            # We already moved the piece, so we remove it from new location
-            new_cell.remove_piece(move.piece)
-            if not self.is_valid_state():
-                self.logs.warning(f"{move.piece.type} at cell {move.current_coord} cannot move to cell "
-                                  f"{move.final_coord}. This would result in disconnect island.")
-                valid_state = False
-            else:
-                valid_state = True
-            new_cell.add_piece(move.piece)
-
-            # Return the move that we tested
-            self._move_piece_backwards(move)
-
-            return valid_state
-
     # This is only low level function - to move pieces use make_move()
-    def _move_piece(self, move, update_stats=True):
+    def _move_piece(self, move, testing=False):
         current_cell = self.get_cell(move.current_coord)
         new_cell = self.get_cell(move.final_coord)
         #Placing piece on the board
-        if (current_cell is None) and not (new_cell is None):
+        if (current_cell is None) and (new_cell is not None):
             new_cell.add_piece(move.piece)
             if move.piece.type == Piece.PieceType.QUEEN:
                 if move.piece.color == Piece.PieceColour.WHITE:
                     self.white_queen_placed = True
                 if move.piece.color == Piece.PieceColour.BLACK:
                     self.black_queen_placed = True
-            self.update_stats()
-            self.logs.info(f"Piece {move.piece} is now on the board at {move.final_coord}.")
+            if not testing:
+                self.logs.info(f"Piece {move.piece} is now on the board at {move.final_coord}.")
             return True
         #Making move
-        elif not (current_cell is None) and not (new_cell is None):
+        elif (current_cell is not None) and (new_cell is not None):
             current_cell.remove_piece(move.piece)
             new_cell.add_piece(move.piece)
-            if update_stats:
-                self.update_stats()
+            return True
+        #Moving piece back to bank - this shouldn't be possible in normal game - just for AI to explore the game
+        elif (current_cell is not None) and (new_cell is None):
+            current_cell.remove_piece(move.piece)
+            if move.piece.type == Piece.PieceType.QUEEN:
+                if move.piece.color == Piece.PieceColour.WHITE:
+                    self.white_queen_placed = False
+                if move.piece.color == Piece.PieceColour.BLACK:
+                    self.black_queen_placed = False
             return True
         else:
             self.logs.error(f"You are trying to do {move} and that is not possible. Coordinates not on board.")
@@ -567,34 +560,57 @@ class Game(Board):
     # individual pieces and for checking of the rules. Not supposed to be used by Player.
     def _move_piece_backwards(self, move):
         move_backwards = Move(move.final_coord, move.current_coord, move.piece)
-        return self._move_piece(move_backwards, update_stats=False)
+        return self._move_piece(move_backwards, testing=True)
 
     def make_move(self, move):
-        #FIXME Fix logic of placing queen between rounds 2-4
-        if self.is_move_legal(move):
-            move_success = self._move_piece(move)
-            message = self.check_win()
-            if self.check_win():
-                self.logs.info(message)
-            return move_success
-        else:
-            self.logs.error(f"Cannot make move {move}. Illegal move (or poorly implemented rules haha).")
-            return False
+        move_success = self._move_piece(move)
+        self.update_stats()
+        message = self.check_win()
+        if self.check_win():
+            self.logs.info(message)
+        return move_success
 
     def list_all_possible_moves(self, player_color):
         if player_color == Piece.PieceColour.BLACK:
-            piece_bank = self.piece_bank_black
+            piece_bank = self.piece_bank["black"]
+            queen_placed = self.black_queen_placed
         elif player_color == Piece.PieceColour.WHITE:
-            piece_bank = self.piece_bank_white
+            piece_bank = self.piece_bank["white"]
+            queen_placed = self.white_queen_placed
         else:
             raise ValueError(f"Player has some weird colour - should be BLACK or WHITE")
 
         moves_list = []
-        for piece in piece_bank.values():
-            current_position = piece.coord
-            possible_moves = piece.get_possible_moves(self)
-            #if len(possible_moves) > 0:
-            if possible_moves is not None:
-                for move in possible_moves:
-                    moves_list.append(Move(current_position, move.coord, piece))
+        if not queen_placed:
+            if self.round_counter == 1:
+                for piece_type, piece in piece_bank.items():
+                    if piece_type != "queen":
+                        possible_placements = piece.get_possible_moves(self)
+                        for placement in possible_placements:
+                            moves_list.append(Move(piece.coord, placement.coord, piece))
+            elif self.round_counter == 4:
+                piece = piece_bank["queen"]
+                possible_placements = piece.get_possible_moves(self)
+                for placement in possible_placements:
+                    moves_list.append(Move(piece.coord, placement.coord, piece))
+            else:
+                for piece in piece_bank.values():
+                    if piece.coord is None:
+                        possible_placements = piece.get_possible_moves(self)
+                        for placement in possible_placements:
+                            moves_list.append(Move(piece.coord, placement.coord, piece))
+        else:
+            for piece in piece_bank.values():
+                possible_placements = None
+                if piece.coord is None:
+                    if possible_placements is None:
+                        possible_placements = piece.get_possible_moves(self)
+                    for placement in possible_placements:
+                        moves_list.append(Move(piece.coord, placement.coord, piece))
+                else:
+                    if self.is_piece_on_top(piece):
+                        if self.piece_can_be_lifted(piece):
+                            possible_placements = piece.get_possible_moves(self)
+                            for placement in possible_placements:
+                                moves_list.append(Move(piece.coord, placement.coord, piece))
         return moves_list
