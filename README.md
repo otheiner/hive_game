@@ -10,7 +10,7 @@ I have a several goals in this project:
     - [x] implement all types of pieces (pillbug will be added later)
   - write different agents which will be able to play the game
     - [x] random agent
-    - [ ] minimax
+    - [x] minimax (it is working to depth 3 and is terribly slow)
     - [ ] alpha-beta pruning
     - [ ] explore suitable NN architecture(s)
   - learn something new from machine learning
@@ -26,3 +26,7 @@ Just clone this repository to your local machine and from inside the main folder
 python3 hive_game.py
 ```
 This will open the game window and you can play. Have fun!
+
+The game doesn't use any unusual packages (*), except ```pygame```, which you might need to install.
+
+(* I hope - this can change since the game is still WIP.)
