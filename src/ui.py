@@ -784,11 +784,11 @@ class PygameGUI(UI):
 
     def update_messanger(self):
         self.messanger_surface.fill((255, 255, 255))
-        printed_messages = self.game.logs.messages[-5:]
+        printed_messages = self.game.logs.messages[-3:-1]
         line_no = 0
-        for message in printed_messages:
+        for i in range(len(printed_messages)):
             font = pygame.font.SysFont("Comic Sans", 12)
-            line = message.__str__()
+            line = printed_messages[-i].__str__()
             text_surface = font.render(line, True, (0, 0, 0))
             x = 0.2 * self.MESSANGER_WIDTH
             y = 0.5 * self.MESSANGER_HEIGHT
