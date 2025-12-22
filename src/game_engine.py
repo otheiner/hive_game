@@ -160,7 +160,6 @@ class Game(Board):
     #             neighbors.append(cell)
     #     return neighbors
 
-   #FIXME This doesn't work with Minimax AI /the old version - commented out above) works.
     def get_neighbors(self, coord):
         if coord is None:
             return []
@@ -168,11 +167,10 @@ class Game(Board):
         if neighbors is not None and len(neighbors) == 6:
             return neighbors
         else:
-            raise Exception(f"Game is too large - getting out of board.")
+            raise Exception(f"Game is too large - getting out of board. Aborting.")
 
     def update_stats(self, backwards=False):
         self.white_turn = not self.white_turn
-        #self.find_bridges()
         if not backwards:
             if self.white_turn:
                 self.round_counter += 1
@@ -382,30 +380,6 @@ class Game(Board):
                 return flood_fill_freedom_to_move_border(empty_cell_on_outer_border.coord)
             else:
                 return flood_fill_outer_border(empty_cell_on_outer_border.coord)
-
-    # def get_playable_border(self, coord):
-    #     playable_border = self.get_outer_border(require_freedom_to_move=True)
-    #     empty_neighbors = self.get_empty_neighbors(coord)
-    #     border_reachable = False
-    #     # Playable border for piece in bank is outer border with freedom to move rule
-    #     if coord is None:
-    #         return playable_border
-    #     #FIXME This shouldn't be probably here and it should be managed by each piece by doing
-    #     # flood fill and checking if they can move to the next cell.
-    #     for neighbor in empty_neighbors:
-    #         if neighbor in playable_border:
-    #             # Remove cells that would end up having no occupied neighbor after moving the piece
-    #             if len(self.get_occupied_neighbors(neighbor.coord)) == 1:
-    #                 playable_border.remove(neighbor)
-    #             # Check that we can reach playable border and not violate freedom to move rule
-    #             else:
-    #                 if self.freedom_to_move(coord, neighbor.coord):
-    #                     border_reachable = True
-    #
-    #     if border_reachable:
-    #         return playable_border
-    #     else:
-    #         return []
 
     def has_neighbours_of_same_color(self, coord, piece):
         neighbours = self.get_occupied_neighbors(coord)
