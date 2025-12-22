@@ -164,21 +164,11 @@ class Game(Board):
     def get_neighbors(self, coord):
         if coord is None:
             return []
-        neighbors = self.neighbors.get(coord)
-        if neighbors is not None:
+        neighbors = self.neighbors.get((coord.q, coord.r, coord.s))
+        if neighbors is not None and len(neighbors) == 6:
             return neighbors
         else:
-            self.neighbors[coord] = []
-            for dq, dr, ds in Board.HEX_DIRECTIONS:
-                key = (coord.q + dq, coord.r + dr, coord.s + ds)
-                cell = self.cells.get(key)
-                if cell is not None:
-                    self.neighbors[coord].append(cell)
-                else:
-                    self.cells[key] = Cell(key)
-                    cell = self.cells.get(key)
-                    self.neighbors[coord].append(cell)
-            return self.neighbors.get(coord)
+            raise Exception(f"Game is too large - getting out of board.")
 
     def update_stats(self, backwards=False):
         self.white_turn = not self.white_turn

@@ -13,11 +13,10 @@ class Board:
     def __init__(self, halfwidth):
         self.halfwidth = halfwidth
         self.board_size = 2 * self.halfwidth + 1
-        #Make sure that I really don't miss the array
-        #self.board = np.zeros((self.board_size, self.board_size, self.board_size))
         self.cells = {}  # key = (q,r,s), value = Cell
         self.neighbors = {}
 
+        #Initialise cells
         for i in range(self.board_size):
             for j in range(self.board_size):
                 for k in range(self.board_size):
@@ -26,6 +25,15 @@ class Board:
                         self.cells[(coord.q, coord.r, coord.s)] = Cell(coord)
                     except:
                         pass
+
+        #Caching neighbors to speed-up look-up
+        for coord, cell in self.cells.items():
+            self.neighbors[(coord[0], coord[1], coord[2])] = []
+            for dq, dr, ds in self.HEX_DIRECTIONS:
+                nc = (coord[0] + dq,
+                      coord[1] + dr,
+                      coord[2] + ds)
+                self.neighbors[(coord[0], coord[1], coord[2])].append(self.cells.get(nc))
 
     def coord_to_array(self, coord):
         if (abs(coord.q)*2+1 > self.board_size or

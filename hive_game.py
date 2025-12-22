@@ -7,7 +7,7 @@ from src.ui import MatplotlibGUI
 def main():
     game = Game()
     #ui = MatplotlibGUI(game,1.3, 40, 40)
-    ui = PygameGUI(game, 28, 1200, 750, Log.DebugLevel.ERROR)
+    ui = PygameGUI(game, 28, 1200, 750, Log.DebugLevel.INFO)
 
     if isinstance(ui, PygameGUI):
         if ui.game_setup() == -1:

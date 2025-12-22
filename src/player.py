@@ -58,7 +58,6 @@ class RandomAI(AI):
         super().__init__(color, ui)
 
     def select_move(self, game):
-        #possible_moves = self.ui.get_all_possible_moves()
         possible_moves = self.ui.game.list_all_possible_moves(self.color)
         self.ui.game.logs.debug(f"Possible moves: {possible_moves}")
         move_number = random.randrange(0, len(possible_moves))
@@ -132,7 +131,7 @@ class MinimaxAI(AI):
             raise ValueError(f"Unknown evaluation strategy for AI player")
 
     NO_OF_EVALS = 0
-    def minimax(self, game_state, depth=1, evaluation_strategy=2):
+    def minimax(self, game_state, depth=1, evaluation_strategy=1):
         depth_limit = 2
         odd_move = (depth % 2 == 0)
         player_color = self.color if not odd_move else self.opponent_color
@@ -149,13 +148,23 @@ class MinimaxAI(AI):
             game_state._move_piece(move,testing=True)
             current_node_value = self.minimax(game_state, depth + 1, evaluation_strategy=evaluation_strategy)[0]
             if odd_move:
-                if current_node_value < best_node_value:
-                    best_node_value = current_node_value
-                    best_move = move
+                if current_node_value <= best_node_value:
+                    if current_node_value == best_node_value:
+                        if random.random() < 0.5:
+                            best_node_value = current_node_value
+                            best_move = move
+                    else:
+                        best_node_value = current_node_value
+                        best_move = move
             else:
-                if current_node_value > best_node_value:
-                    best_node_value = current_node_value
-                    best_move = move
+                if current_node_value >= best_node_value:
+                    if current_node_value == best_node_value:
+                        if random.random() < 0.5:
+                            best_node_value = current_node_value
+                            best_move = move
+                    else:
+                        best_node_value = current_node_value
+                        best_move = move
             game_state._move_piece_backwards(move)
 
         return best_node_value, best_move
