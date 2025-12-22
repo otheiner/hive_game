@@ -1,7 +1,10 @@
 import random
 import numpy as np
+from pygame.transform import average_surfaces
 
 import src.ui as UI
+from src.cell import GridCoordinates
+
 
 class Player:
     class PlayerColor():
@@ -71,9 +74,7 @@ class MinimaxAI(AI):
     def evaluate_state(self, game, strategy=1):
         import time
         if strategy == 1:
-            t1 = time.perf_counter()
             my_possible_moves = len(game.list_all_possible_moves(self.color))
-            t2 = time.perf_counter()
 
             pieces_around_my_queen = game.piece_bank[self.color]["queen"].occupied_neighbors(game)
             opponent_possible_moves = len(game.list_all_possible_moves(self.opponent_color))
@@ -84,54 +85,50 @@ class MinimaxAI(AI):
 
             game_eval = (my_possible_moves - opponent_possible_moves +
                         100 * (-pieces_around_my_queen + pieces_around_opponents_queen))
-            #print(f"possible moves: {t2 - t1} s")
             return game_eval
         elif strategy == 2:
-            t1 = time.perf_counter()
-            pieces_around_my_queen = self.ui.game.piece_bank[self.color]["queen"].occupied_neighbors(game)
-            t2 = time.perf_counter()
-            pieces_around_my_queen = 100000 if (pieces_around_my_queen == 6) else (100 * pieces_around_my_queen)
-            my_movable_pieces = 0
-            t3 = time.perf_counter()
-            for piece in game.piece_bank[self.color].values():
-                if piece.coord is not None:
-                    if game.piece_can_be_lifted(piece):
-                        my_movable_pieces += 1
-            t4 = time.perf_counter()
-
-            pieces_around_opponents_queen = game.piece_bank[self.opponent_color]["queen"].occupied_neighbors(game)
-            pieces_around_opponents_queen = 100000 if (pieces_around_opponents_queen == 6) else (100 * pieces_around_opponents_queen)
-            opponents_movable_pieces = 0
-            for piece in self.ui.game.piece_bank[self.opponent_color].values():
-                if piece.coord is not None:
-                    if self.ui.game.piece_can_be_lifted(piece):
-                        opponents_movable_pieces += 1
-
-            game_eval = (-pieces_around_my_queen + pieces_around_opponents_queen +
-                         my_movable_pieces - opponents_movable_pieces)
-            print(f"pieces around queen: {t2 - t1} s, movable pieces: {t4 - t3} s")
-            return game_eval
-        elif strategy == 3:
-            t1 = time.perf_counter()
             my_possible_moves = len(game.list_all_possible_moves(self.color))
-            t2 = time.perf_counter()
 
             pieces_around_my_queen = game.piece_bank[self.color]["queen"].occupied_neighbors(game)
             opponent_possible_moves = len(game.list_all_possible_moves(self.opponent_color))
             pieces_around_opponents_queen = game.piece_bank[self.opponent_color]["queen"].occupied_neighbors(game)
 
+            distance_from_my_queen = 0
+            opponents_pieces_on_board = 0
+            my_queen_coord = game.piece_bank[self.color]["queen"].coord
+            for piece in game.piece_bank[self.opponent_color]:
+                if piece.coord is not None and my_queen_coord is not None:
+                    distance_from_my_queen += GridCoordinates(piece.coord, my_queen_coord)
+                    opponents_pieces_on_board += 1
+            if opponents_pieces_on_board != 0:
+                average_distance_from_my_queen = distance_from_my_queen / opponents_pieces_on_board
+            else:
+                average_distance_from_my_queen = 100
+
+            distance_from_opponents_queen = 0
+            my_pieces_on_board = 0
+            opponents_queen_coord = game.piece_bank[self.opponent_color]["queen"].coord
+            for piece in game.piece_bank[self.color]:
+                if piece.coord is not None and opponents_queen_coord is not None:
+                    distance_from_opponents_queen += GridCoordinates(piece.coord, opponents_queen_coord)
+                    my_pieces_on_board += 1
+            if my_pieces_on_board != 0:
+                average_distance_from_opponents_queen = distance_from_opponents_queen / my_pieces_on_board
+            else:
+                average_distance_from_opponents_queen = 100
+
             pieces_around_my_queen = 100000 if pieces_around_my_queen == 6 else pieces_around_my_queen
             pieces_around_opponents_queen = 100000 if pieces_around_opponents_queen == 6 else pieces_around_opponents_queen
 
-            game_eval = (my_possible_moves - opponent_possible_moves +
-                        100 * (-pieces_around_my_queen + pieces_around_opponents_queen))
-            #print(f"possible moves: {t2 - t1} s")
+            game_eval = (100 * (1 / average_distance_from_opponents_queen - 1 / average_distance_from_my_queen) +
+                          10 * (my_possible_moves - opponent_possible_moves) +
+                          1000 * (-pieces_around_my_queen + pieces_around_opponents_queen))
             return game_eval
         else:
             raise ValueError(f"Unknown evaluation strategy for AI player")
 
     NO_OF_EVALS = 0
-    def minimax(self, game_state, depth=1, evaluation_strategy=1):
+    def minimax(self, game_state, depth=1, evaluation_strategy=2):
         depth_limit = 2
         odd_move = (depth % 2 == 0)
         player_color = self.color if not odd_move else self.opponent_color

@@ -23,6 +23,7 @@ importlib.reload(texture_lib)
 from src.texture import Texture
 from src.cell import Cell, GridCoordinates
 from src.move import Move
+from src.piece import Piece
 import pygame
 
 class UI:
@@ -515,6 +516,10 @@ class PygameGUI(UI):
     def wait_for_user_input(self, player_color):
         # start_q, start_r, start_s = None, None, None
         # end_q, end_r, end_s = None, None, None
+        self.clear_canvas()
+        self.draw_board()
+        self.draw_stats()
+
         start_cell_selected = False
         end_cell_selected = False
         self.game.logs.info(f"Player {player_color}. Click the start of the move.")
@@ -584,9 +589,6 @@ class PygameGUI(UI):
             if move.piece == piece:
                 possible_moves.append(self.game.get_cell(move.final_coord))
 
-        # if len(self.game.get_occupied_cells()) == 0:
-        #     possible_moves.append(self.game.get_cell(GridCoordinates(0, 0)))
-
         self.game.logs.debug(f"Possible moves: {possible_moves}")
         self.draw_cells(possible_moves, cell_texture = Texture.TextureType.SUGGESTED_MOVE)
         self.draw_piece_banks()
@@ -603,6 +605,8 @@ class PygameGUI(UI):
                     end_cell_selected = True
 
         end_cell = self.game.get_cell(GridCoordinates(end_q, end_r, end_s))
+        if end_cell.has_piece() and piece.type != Piece.PieceType.BEETLE:
+            return self.wait_for_user_input(player_color)
         end_coord = end_cell.coord
         if end_cell not in possible_moves:
             self.game.logs.info(f"Select only cells from allowed moves.")
@@ -836,9 +840,10 @@ class PygameGUI(UI):
 
         running = True
         buttons = pygame.sprite.Group()
-        buttons.add(Button("You vs. Random AI", (self.screen_width/2, self.screen_height/6), pygame.font.SysFont(self.font_type, 30), (0, 0, 0), (255, 0, 0)))
-        buttons.add(Button("You vs. Minimax", (self.screen_width/2, 3*self.screen_height/6), pygame.font.SysFont(self.font_type, 30), (0, 0, 0), (255, 0, 0)))
-        buttons.add(Button("Two Players", (self.screen_width/2, 5*self.screen_height/6), pygame.font.SysFont(self.font_type, 30), (0, 0, 0), (255, 0, 0)))
+        buttons.add(Button("YOU vs. RANDOM AI", (self.screen_width/2, self.screen_height/6), pygame.font.SysFont(self.font_type, 30), (0, 0, 0), (255, 0, 0)))
+        buttons.add(Button("YOU vs. MINIMAX AI", (self.screen_width/2, 2*self.screen_height/6), pygame.font.SysFont(self.font_type, 30), (0, 0, 0), (255, 0, 0)))
+        buttons.add(Button("HUMAN vs. HUMAN", (self.screen_width/2, 3*self.screen_height/6), pygame.font.SysFont(self.font_type, 30), (0, 0, 0), (255, 0, 0)))
+        buttons.add(Button("MINIMAX AI vs. MINIMAX AI", (self.screen_width / 2, 4 * self.screen_height / 6), pygame.font.SysFont(self.font_type, 30), (0, 0, 0), (255, 0, 0)))
 
         while running:
             time.sleep(0.01)
@@ -851,14 +856,17 @@ class PygameGUI(UI):
                 if event.type == pygame.MOUSEBUTTONDOWN:
                     for button in buttons:
                         if button.rect.collidepoint(mouse_pos):
-                            if button.text == "You vs. Random AI":
+                            if button.text == "YOU vs. RANDOM AI":
                                 option = 1
                                 running = False
-                            elif button.text == "You vs. Minimax":
+                            elif button.text == "YOU vs. MINIMAX AI":
                                 option = 2
                                 running = False
-                            elif button.text == "Two Players":
+                            elif button.text == "HUMAN vs. HUMAN":
                                 option = 3
+                                running = False
+                            elif button.text == "MINIMAX AI vs. MINIMAX AI":
+                                option = 4
                                 running = False
 
             buttons.update(mouse_pos)
