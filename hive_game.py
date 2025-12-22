@@ -23,8 +23,8 @@ def main():
     else:
         players = [HumanPlayer(Player.PlayerColor.WHITE, ui), MinimaxAI(Player.PlayerColor.BLACK, ui)]
 
-    #FIXME This is only for testing - remove this
-    players = [MinimaxAI(Player.PlayerColor.WHITE, ui), MinimaxAI(Player.PlayerColor.BLACK, ui)]
+    # #FIXME This is only for testing - remove this
+    # players = [MinimaxAI(Player.PlayerColor.WHITE, ui), MinimaxAI(Player.PlayerColor.BLACK, ui)]
 
     # This is game for testing
     # ui.game.make_move(Move(None, GridCoordinates(0, 0), ui.game.piece_bank["white"]["ant1"]))
