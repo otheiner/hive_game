@@ -117,18 +117,18 @@ class MinimaxAI(AI):
             else:
                 average_distance_from_opponents_queen = 100
 
-            pieces_around_my_queen = 100000 if pieces_around_my_queen == 6 else pieces_around_my_queen
-            pieces_around_opponents_queen = 100000 if pieces_around_opponents_queen == 6 else pieces_around_opponents_queen
+            pieces_around_my_queen = 1000000 if pieces_around_my_queen == 6 else pieces_around_my_queen
+            pieces_around_opponents_queen = 1000000 if pieces_around_opponents_queen == 6 else pieces_around_opponents_queen
 
-            game_eval = (100 * (1 / average_distance_from_opponents_queen - 1 / average_distance_from_my_queen) +
-                          10 * (my_possible_moves - opponent_possible_moves) +
-                          1000 * (-pieces_around_my_queen + pieces_around_opponents_queen))
+            game_eval = (10 * (1 / average_distance_from_opponents_queen - 0.6*1 / average_distance_from_my_queen) +
+                          10 * (my_possible_moves - 0.6*opponent_possible_moves) +
+                          100 * (-pieces_around_my_queen + 0.6*pieces_around_opponents_queen))
             return game_eval
         else:
             raise ValueError(f"Unknown evaluation strategy for AI player")
 
     NO_OF_EVALS = 0
-    def minimax(self, game_state, depth=1, evaluation_strategy=2):
+    def minimax(self, game_state, depth=1, evaluation_strategy=1):
         depth_limit = 2
         odd_move = (depth % 2 == 0)
         player_color = self.color if not odd_move else self.opponent_color
