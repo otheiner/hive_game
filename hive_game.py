@@ -23,6 +23,9 @@ def main():
     else:
         players = [HumanPlayer(Player.PlayerColor.WHITE, ui), MinimaxAI(Player.PlayerColor.BLACK, ui)]
 
+    #FIXME This is only for testing - remove this
+    players = [MinimaxAI(Player.PlayerColor.WHITE, ui), MinimaxAI(Player.PlayerColor.BLACK, ui)]
+
     # This is game for testing
     # ui.game.make_move(Move(None, GridCoordinates(0, 0), ui.game.piece_bank["white"]["ant1"]))
     # ui.game.make_move(Move(None, GridCoordinates(0, -1), ui.game.piece_bank["black"]["ant1"]))
@@ -33,8 +36,8 @@ def main():
 
     # "not" seems a bit counterintuitive (maybe fix it) but it is correct
     # Player maybe changes when placement is unsuccessful
-    show_coordinates_switch = False
     current_player_index = int(not game.white_turn)
+    show_coordinates_switch = False
     ui.clear_canvas()
     ui.draw_board(show_coords=show_coordinates_switch)
     ui.draw_stats()

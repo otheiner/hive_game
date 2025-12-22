@@ -473,6 +473,7 @@ class PygameGUI(UI):
         self.viewport_surface = pygame.Surface((self.VIEWPORT_WIDTH, self.VIEWPORT_HEIGHT), pygame.SRCALPHA)
         self.viewport_surface.fill((255, 255, 255))
         self.viewport_rectangle = pygame.Rect(self.BANK_WIDTH, 0, self.VIEWPORT_WIDTH, self.VIEWPORT_HEIGHT)
+        self.font_type = "Copperplate"
 
         pygame.display.set_caption("Hive Game")
 
@@ -583,8 +584,8 @@ class PygameGUI(UI):
             if move.piece == piece:
                 possible_moves.append(self.game.get_cell(move.final_coord))
 
-        if len(self.game.get_occupied_cells()) == 0:
-            possible_moves.append(self.game.get_cell(GridCoordinates(0, 0)))
+        # if len(self.game.get_occupied_cells()) == 0:
+        #     possible_moves.append(self.game.get_cell(GridCoordinates(0, 0)))
 
         self.game.logs.debug(f"Possible moves: {possible_moves}")
         self.draw_cells(possible_moves, cell_texture = Texture.TextureType.SUGGESTED_MOVE)
@@ -709,7 +710,7 @@ class PygameGUI(UI):
 
     def draw_stats(self):
         #screen = self._ensure_screen()
-        font = pygame.font.SysFont("Comic Sans", 25)
+        font = pygame.font.SysFont(self.font_type, 25)
         if self.game.white_turn:
             line1 = "White turn"
         else:
@@ -787,7 +788,7 @@ class PygameGUI(UI):
         printed_messages = self.game.logs.messages[-3:-1]
         line_no = 0
         for i in range(len(printed_messages)):
-            font = pygame.font.SysFont("Comic Sans", 12)
+            font = pygame.font.SysFont(self.font_type, 12)
             line = printed_messages[-i].__str__()
             text_surface = font.render(line, True, (0, 0, 0))
             x = 0.2 * self.MESSANGER_WIDTH
@@ -835,9 +836,9 @@ class PygameGUI(UI):
 
         running = True
         buttons = pygame.sprite.Group()
-        buttons.add(Button("You vs. Random AI", (self.screen_width/2, self.screen_height/6), pygame.font.SysFont("Comic Sans", 30), (0, 0, 0), (255, 0, 0)))
-        buttons.add(Button("You vs. Minimax", (self.screen_width/2, 3*self.screen_height/6), pygame.font.SysFont("Comic Sans", 30), (0, 0, 0), (255, 0, 0)))
-        buttons.add(Button("Two Players", (self.screen_width/2, 5*self.screen_height/6), pygame.font.SysFont("Comic Sans", 30), (0, 0, 0), (255, 0, 0)))
+        buttons.add(Button("You vs. Random AI", (self.screen_width/2, self.screen_height/6), pygame.font.SysFont(self.font_type, 30), (0, 0, 0), (255, 0, 0)))
+        buttons.add(Button("You vs. Minimax", (self.screen_width/2, 3*self.screen_height/6), pygame.font.SysFont(self.font_type, 30), (0, 0, 0), (255, 0, 0)))
+        buttons.add(Button("Two Players", (self.screen_width/2, 5*self.screen_height/6), pygame.font.SysFont(self.font_type, 30), (0, 0, 0), (255, 0, 0)))
 
         while running:
             time.sleep(0.01)
@@ -869,7 +870,7 @@ class PygameGUI(UI):
 
     #TODO This is veeeery ugly - fix me
     def show_message(self, message):
-        font = pygame.font.SysFont("Comic Sans", 60)
+        font = pygame.font.SysFont(self.font_type, 60)
         text_surface = font.render(message, True, (255, 0, 0))
         self.screen.blit(text_surface, (0.3*self.screen_width, self.screen_height/2))
         pygame.display.flip()

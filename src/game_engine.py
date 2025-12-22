@@ -468,6 +468,8 @@ class Game(Board):
         coord = piece.coord
         piece_cell = self.get_cell(coord)
 
+
+
         # If piece in bank, check if it can be placed somewhere on the board
         if coord is None:
             if len(self.get_possible_placements(piece)) == 0:
@@ -477,11 +479,6 @@ class Game(Board):
 
         # Check if piece is on top of the cell stack
         if piece_cell.get_top_piece() != piece:
-            return False
-
-        #FIXME This is probably not working or is not used
-        # Queen cannot be placed during the first move
-        if self.round_counter == 1 and piece.type == Piece.PieceType.QUEEN:
             return False
 
         #TODO Implement the rule that pieces can't move before the queen was placed
@@ -589,10 +586,12 @@ class Game(Board):
             for piece in piece_bank.values():
                 possible_placements = None
                 if piece.coord is None:
-                    if possible_placements is None:
-                        possible_placements = piece.get_possible_moves(self)
-                    for placement in possible_placements:
-                        moves_list.append(Move(piece.coord, placement.coord, piece))
+                    # Queen cannot be placed on first move (both colors)
+                    if not (self.round_counter == 1 and piece.type == Piece.PieceType.QUEEN):
+                        if possible_placements is None:
+                            possible_placements = piece.get_possible_moves(self)
+                        for placement in possible_placements:
+                            moves_list.append(Move(piece.coord, placement.coord, piece))
                 else:
                     if self.is_piece_on_top(piece):
                         if self.piece_can_be_lifted(piece):
