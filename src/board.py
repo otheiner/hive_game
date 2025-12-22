@@ -16,6 +16,7 @@ class Board:
         #Make sure that I really don't miss the array
         #self.board = np.zeros((self.board_size, self.board_size, self.board_size))
         self.cells = {}  # key = (q,r,s), value = Cell
+        self.neighbors = {}
 
         for i in range(self.board_size):
             for j in range(self.board_size):

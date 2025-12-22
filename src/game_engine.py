@@ -4,6 +4,7 @@ from enum import IntEnum
 import src.board as board_lib
 import src.piece as piece_lib
 from src.cell import GridCoordinates
+from src.cell import Cell
 from src.move import Move
 
 importlib.reload(board_lib)
@@ -68,7 +69,7 @@ class Logbook():
             print(log)
 
 class Game(Board):
-    def __init__(self, halfwidth):
+    def __init__(self, halfwidth=30):
         super().__init__(halfwidth)
         self.logs = Logbook(Log.DebugLevel.INFO)
         self.winning_state = False
@@ -148,16 +149,36 @@ class Game(Board):
         else:
             raise ValueError(f"Piece has some weird colour - should be BLACK or WHITE")
 
+    # def get_neighbors(self, coord):
+    #     neighbors = []
+    #     if coord is None:
+    #         return neighbors
+    #     for dq, dr, ds in Board.HEX_DIRECTIONS:
+    #         key = (coord.q + dq, coord.r + dr, coord.s + ds)
+    #         cell = self.cells.get(key)
+    #         if cell is not None:
+    #             neighbors.append(cell)
+    #     return neighbors
+
+   #FIXME This doesn't work with Minimax AI /the old version - commented out above) works.
     def get_neighbors(self, coord):
-        neighbors = []
         if coord is None:
+            return []
+        neighbors = self.neighbors.get(coord)
+        if neighbors is not None:
             return neighbors
-        for dq, dr, ds in Board.HEX_DIRECTIONS:
-            key = (coord.q + dq, coord.r + dr, coord.s + ds)
-            cell = self.cells.get(key)
-            if cell is not None:
-                neighbors.append(cell)
-        return neighbors
+        else:
+            self.neighbors[coord] = []
+            for dq, dr, ds in Board.HEX_DIRECTIONS:
+                key = (coord.q + dq, coord.r + dr, coord.s + ds)
+                cell = self.cells.get(key)
+                if cell is not None:
+                    self.neighbors[coord].append(cell)
+                else:
+                    self.cells[key] = Cell(key)
+                    cell = self.cells.get(key)
+                    self.neighbors[coord].append(cell)
+            return self.neighbors.get(coord)
 
     def update_stats(self, backwards=False):
         self.white_turn = not self.white_turn
@@ -541,6 +562,8 @@ class Game(Board):
         elif (current_cell is not None) and (new_cell is not None):
             current_cell.remove_piece(move.piece)
             new_cell.add_piece(move.piece)
+            if not testing:
+                self.logs.info(f"Piece {move.piece} moved from {move.current_coord} to {move.final_coord}.")
             return True
         #Moving piece back to bank - this shouldn't be possible in normal game - just for AI to explore the game
         elif (current_cell is not None) and (new_cell is None):

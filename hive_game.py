@@ -3,10 +3,9 @@ from src.ui import PygameGUI
 from src.game_engine import Game, Logbook, Log
 from src.player import HumanPlayer, Player, RandomAI, MinimaxAI
 from src.ui import MatplotlibGUI
-from src.move import Move
 
 def main():
-    game = Game(15)
+    game = Game()
     #ui = MatplotlibGUI(game,1.3, 40, 40)
     ui = PygameGUI(game, 28, 1200, 750, Log.DebugLevel.ERROR)
 
@@ -68,6 +67,7 @@ def main():
                 if isinstance(ui, MatplotlibGUI) or isinstance(ui, PygameGUI):
                     ui.show_canvas()
                 if ui.game.winning_state:
+                    #FIXME The message who wins is not shown correctly (if white loses when he makes move to make him lose
                     ui.game.logs.info(f"Player {player.color} wins!")
                     ui.show_message(f"Player {player.color} wins!")
                     return

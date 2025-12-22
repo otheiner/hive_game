@@ -133,7 +133,7 @@ class MinimaxAI(AI):
 
     NO_OF_EVALS = 0
     def minimax(self, game_state, depth=1, evaluation_strategy=2):
-        depth_limit = 3
+        depth_limit = 2
         odd_move = (depth % 2 == 0)
         player_color = self.color if not odd_move else self.opponent_color
 
