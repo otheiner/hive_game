@@ -16,7 +16,7 @@ I have a several goals in this project:
   - learn something new from machine learning
     - [ ] reinforcement learning
 
-The screenshot of a current simple game display is shown below.
+The screenshot of a current game display is shown below.
 
 <img src="https://github.com/otheiner/hive_game/blob/main/assets/game_screenshot_1.png" width="750">
 
