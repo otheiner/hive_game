@@ -20,6 +20,9 @@ The screenshot of a current game display is shown below.
 
 <img src="https://github.com/otheiner/hive_game/blob/main/assets/game_screenshot_1.png" width="750">
 
+## Game complexity
+The estimated average branching factor of the game is somewhere between 40-60, which is higher than the estimated average branching factor for chess (~35). Even though the numbers are just approximative, comparing them makes it clear that searching the space of game states for Hive game is challenging. I quickly realised that something that I started as a fun little project turned out to be much more interesting and rather complex.
+
 ## How to run the game?
 Just clone this repository to your local machine and from inside the main folder where ```hive_game.py``` is located run:
 ```
