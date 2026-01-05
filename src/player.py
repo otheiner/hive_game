@@ -82,8 +82,8 @@ class MinimaxAI(AI):
             pieces_around_my_queen = 10 if pieces_around_my_queen == 6 else pieces_around_my_queen
             pieces_around_opponents_queen = 10 if pieces_around_opponents_queen == 6 else pieces_around_opponents_queen
 
-            game_eval = (my_possible_moves - opponent_possible_moves +
-                         (-10**pieces_around_my_queen + 10**pieces_around_opponents_queen))
+            game_eval = (0.9*my_possible_moves - opponent_possible_moves +
+                         (-10**pieces_around_my_queen + 0.9*10**pieces_around_opponents_queen))
             #game_eval = (- opponent_possible_moves + 100 * (pieces_around_opponents_queen))
             return game_eval
         elif strategy == 2:
@@ -130,7 +130,7 @@ class MinimaxAI(AI):
             raise ValueError(f"Unknown evaluation strategy for AI player")
 
     NO_OF_EVALS = 0
-    def minimax(self, game_state, depth=1, evaluation_strategy=2):
+    def minimax(self, game_state, depth=1, evaluation_strategy=1):
         depth_limit = 2
         odd_move = (depth % 2 == 0)
         player_color = self.color if not odd_move else self.opponent_color
@@ -149,7 +149,7 @@ class MinimaxAI(AI):
 
         if depth == depth_limit:
             self.NO_OF_EVALS += 1
-            #print(f"Eval no: {self.NO_OF_EVALS}")
+            print(f"Eval no: {self.NO_OF_EVALS}")
             return self.evaluate_state(game_state, strategy=evaluation_strategy), None
 
         best_node_value = 1 * np.inf if odd_move else -1* np.inf

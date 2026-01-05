@@ -605,7 +605,7 @@ class PygameGUI(UI):
                     end_cell_selected = True
 
         end_cell = self.game.get_cell(GridCoordinates(end_q, end_r, end_s))
-        if end_cell.has_piece() and piece.type.value != Piece.PieceType.BEETLE:
+        if end_cell.has_piece() and piece.type.value != Piece.PieceType.BEETLE.value:
             return self.wait_for_user_input(player_color)
         end_coord = end_cell.coord
         if end_cell not in possible_moves:

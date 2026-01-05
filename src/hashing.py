@@ -4,7 +4,7 @@ from src.piece import Piece
 
 class ZobristHashing():
     def __init__(self, game):
-        random.seed(42)
+        random.Random(42)
         self.STACK_HEIGHT_LIMIT = 6
         self.BOARD_RADIUS_LIMIT = 25
         self.hash = 0
@@ -39,7 +39,7 @@ class ZobristHashing():
         for position in self.coord_to_index.values():
             for piece in self.piece_to_index.values():
                 for stack_position in range(self.STACK_HEIGHT_LIMIT):
-                    random.seed(seed)
+                    random.Random(seed)
                     self.hash_table[position][piece][stack_position] = random.getrandbits(64)
                     seed += 1
 
@@ -60,4 +60,4 @@ class ZobristHashing():
         position_index_to = self.coord_to_index[position_key_to]
         self.hash ^= self.hash_table[position_index_from][piece_index][stack_position_start]
         self.hash ^= self.hash_table[position_index_to][piece_index][stack_position_end]
-        print("hash", self.hash)
+        #print("hash", self.hash)

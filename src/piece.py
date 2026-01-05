@@ -119,6 +119,7 @@ class Grasshopper(Piece):
 
 #FIXME This is not working well when  beetle is on top of stack and should move
 # on to of stack on opponent's piece - I don't know why
+# TODO: Beetle can jump "over the bay"
 class Beetle(Piece):
     def __init__(self, colour):
         super().__init__(self.PieceType.BEETLE, colour)
@@ -126,6 +127,7 @@ class Beetle(Piece):
     def piece_movement_pattern(self, game_state):
         coord = self.coord
         possible_moves = []
+        print("beetle")
         # levels indexed from 1, level 0 is empty cell
         #TODO Not sure if there shouldn't be + 2
         level = game_state.get_cell(coord).get_pieces().index(self) + 1
@@ -134,10 +136,12 @@ class Beetle(Piece):
             neighbor_height = len(neighbor.get_pieces())
             if (game_state.freedom_to_move(coord, neighbor.coord, level) and
                 (len(game_state.get_occupied_neighbors(neighbor.coord)) > 1)):
+                print("appending 1")
                 possible_moves.append(neighbor)
             # Allow jumping to the higher level
             elif (neighbor_height >= level and
                 game_state.freedom_to_move(coord, neighbor.coord, neighbor_height + 1)):
+                print("appending 2")
                 possible_moves.append(neighbor)
         return possible_moves
 

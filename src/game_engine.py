@@ -324,15 +324,26 @@ class Game(Board):
         #TODO Let's see if this fixes things or breaks (original line is commented). New rule should make
         # sure that we are able to reach the other cell by sliding and following the edge.
         if (bottleneck_left_cell is None) or (bottleneck_right_cell is None):
-        #if (bottleneck_left_cell is None) != (bottleneck_right_cell is None):
             return True
-        if bottleneck_left_cell.has_piece != bottleneck_left_cell.has_piece:
+        if bottleneck_left_cell.has_piece() != bottleneck_right_cell.has_piece():
+            print(bottleneck_left_cell, bottleneck_right_cell)
+            print(bottleneck_left_cell.has_piece(), bottleneck_right_cell.has_piece())
+            print(2)
             return True
-        if (len(bottleneck_left_cell.get_pieces()) < level or
-            len(bottleneck_right_cell.get_pieces()) < level):
-            return True
+        elif not bottleneck_left_cell.has_piece() and not bottleneck_right_cell.has_piece():
+            if level == 1:
+                return False
+            else:
+                return True
+        elif bottleneck_left_cell.has_piece() and bottleneck_right_cell.has_piece():
+            if (len(bottleneck_left_cell.get_pieces()) < level or
+                len(bottleneck_right_cell.get_pieces()) < level):
+                print(3)
+                return True
+            else:
+                return False
         else:
-            return False
+            raise ValueError("Check freedom to move - this shouldn't happen")
 
     def get_outer_border(self, require_freedom_to_move = False):
         # This can happen only before any piece is placed
