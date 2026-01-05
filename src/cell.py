@@ -27,7 +27,7 @@ class GridCoordinates:
             return NotImplemented
 
     def __hash__(self):
-        return hash((self.q, self.r, self.s))
+        return hash((self.q, self.r))
 
     def __repr__(self):
         return f"coord({self.q}, {self.r}, {self.s})"

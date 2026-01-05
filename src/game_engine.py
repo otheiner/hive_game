@@ -1,10 +1,11 @@
 import importlib
 from enum import IntEnum
+import random
 
 import src.board as board_lib
 import src.piece as piece_lib
 from src.cell import GridCoordinates
-from src.cell import Cell
+from src.hashing import ZobristHashing
 from src.move import Move
 
 importlib.reload(board_lib)
@@ -77,7 +78,6 @@ class Game(Board):
         self.white_queen_placed = False
         self.black_queen_placed = False
         self.round_counter = 1
-        # self.bridges_in_current_state = set()
         self.piece_bank = { "white": {"queen": Queen(Piece.PieceColour.WHITE),
                                      "spider1": Spider(Piece.PieceColour.WHITE),
                                      "spider2": Spider(Piece.PieceColour.WHITE),
@@ -107,6 +107,7 @@ class Game(Board):
                                      "ladybug": Ladybug(Piece.PieceColour.BLACK)
                                      }
                             }
+        self.hashing = ZobristHashing(self)
 
     @staticmethod
     def print_cells(cells):
@@ -131,13 +132,13 @@ class Game(Board):
 
         # This would be weird situation, but it would be a draw. Both queens have 6 neighbours.
         if white_winner and black_winner:
-            return "How did you manage to do this?! This is draw!"
+            return "draw"
         # White is winner
         if white_winner and not black_winner:
-            return "White wins!"
+            return "white"
         # Black is winner
         if white_winner and black_winner:
-            return "Black wins!"
+            return "black"
 
         return False
 
@@ -249,6 +250,13 @@ class Game(Board):
             return True
         else:
             return False
+
+    def piece_stack_position(self, piece):
+        if piece.coord is None:
+            return 0
+        else:
+            piece_cell = self.get_cell(piece.coord)
+            return piece_cell.pieces.index(piece)
 
     def piece_can_be_lifted(self,piece):
         piece_coord = piece.coord
@@ -468,8 +476,6 @@ class Game(Board):
         coord = piece.coord
         piece_cell = self.get_cell(coord)
 
-
-
         # If piece in bank, check if it can be placed somewhere on the board
         if coord is None:
             if len(self.get_possible_placements(piece)) == 0:
@@ -508,9 +514,12 @@ class Game(Board):
     def _move_piece(self, move, testing=False):
         current_cell = self.get_cell(move.current_coord)
         new_cell = self.get_cell(move.final_coord)
+        stack_position_start = self.piece_stack_position(move.piece)
         #Placing piece on the board
         if (current_cell is None) and (new_cell is not None):
             new_cell.add_piece(move.piece)
+            stack_position_end = 0
+            self.hashing.update_hash(move, stack_position_start, stack_position_end)
             if move.piece.type == Piece.PieceType.QUEEN:
                 if move.piece.color == Piece.PieceColour.WHITE:
                     self.white_queen_placed = True
@@ -523,12 +532,16 @@ class Game(Board):
         elif (current_cell is not None) and (new_cell is not None):
             current_cell.remove_piece(move.piece)
             new_cell.add_piece(move.piece)
+            stack_position_end = self.piece_stack_position(move.piece)
+            self.hashing.update_hash(move, stack_position_start, stack_position_end)
             if not testing:
                 self.logs.info(f"Piece {move.piece} moved from {move.current_coord} to {move.final_coord}.")
             return True
         #Moving piece back to bank - this shouldn't be possible in normal game - just for AI to explore the game
         elif (current_cell is not None) and (new_cell is None):
             current_cell.remove_piece(move.piece)
+            stack_position_end = 0
+            self.hashing.update_hash(move, stack_position_start, stack_position_end)
             if move.piece.type == Piece.PieceType.QUEEN:
                 if move.piece.color == Piece.PieceColour.WHITE:
                     self.white_queen_placed = False
@@ -554,10 +567,10 @@ class Game(Board):
         return move_success
 
     def list_all_possible_moves(self, player_color):
-        if player_color == Piece.PieceColour.BLACK:
+        if player_color == Piece.PieceColour.BLACK.value:
             piece_bank = self.piece_bank["black"]
             queen_placed = self.black_queen_placed
-        elif player_color == Piece.PieceColour.WHITE:
+        elif player_color == Piece.PieceColour.WHITE.value:
             piece_bank = self.piece_bank["white"]
             queen_placed = self.white_queen_placed
         else:

@@ -391,7 +391,7 @@ class MatplotlibGUI(UI):
         if start_coord is not None:
             top_piece = self.game.cells[(start_coord.q, start_coord.r, start_coord.s)].get_top_piece()
             if top_piece is not None:
-                if (top_piece.type == piece_name) and (top_piece.color == player_color):
+                if (top_piece.type.value == piece_name) and (top_piece.color.value == player_color):
                     # TODO I think there might be problem with pointers
                     selected_piece = top_piece
                 else:
@@ -404,7 +404,7 @@ class MatplotlibGUI(UI):
         else:
             selected_piece = None
             for piece in piece_bank.values():
-                if piece.type == piece_name and piece.coord is None:
+                if piece.type.value == piece_name and piece.coord is None:
                     selected_piece = piece
             if selected_piece is None:
                 self.game.logs.error(f"Piece {piece_name} not in the bank. Enter the move again.")
@@ -574,7 +574,7 @@ class PygameGUI(UI):
                         self.draw_cell(start_cell.coord, cell_texture=Texture.TextureType.HIGHLIGHTED_CELL)
                         start_cell_selected = True
 
-        if piece.color == player_color:
+        if piece.color.value == player_color:
             self.show_canvas()
         else:
             self.game.logs.info(f"Select {player_color} piece.")
@@ -605,7 +605,7 @@ class PygameGUI(UI):
                     end_cell_selected = True
 
         end_cell = self.game.get_cell(GridCoordinates(end_q, end_r, end_s))
-        if end_cell.has_piece() and piece.type != Piece.PieceType.BEETLE:
+        if end_cell.has_piece() and piece.type.value != Piece.PieceType.BEETLE:
             return self.wait_for_user_input(player_color)
         end_coord = end_cell.coord
         if end_cell not in possible_moves:

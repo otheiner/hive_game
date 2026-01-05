@@ -1,8 +1,10 @@
+from enum import Enum
+
 from src.texture import Texture
 from src.move import Move
 
 class Piece:
-    class PieceType:
+    class PieceType(Enum):
         QUEEN = "queen"
         ANT = "ant"
         SPIDER = "spider"
@@ -12,46 +14,35 @@ class Piece:
         LADYBUG = "ladybug"
         PILLBUG = "pillbug"
 
-    class PieceColour():
+    class PieceColour(Enum):
         BLACK = "black"
         WHITE = "white"
+
+    # Precompute mapping once
+    TEXTURE_MAP = {
+        (PieceType.QUEEN, PieceColour.BLACK): Texture.TextureType.BLACK_QUEEN,
+        (PieceType.ANT, PieceColour.BLACK): Texture.TextureType.BLACK_ANT,
+        (PieceType.SPIDER, PieceColour.BLACK): Texture.TextureType.BLACK_SPIDER,
+        (PieceType.GRASSHOPPER, PieceColour.BLACK): Texture.TextureType.BLACK_GRASSHOPPER,
+        (PieceType.BEETLE, PieceColour.BLACK): Texture.TextureType.BLACK_BEETLE,
+        (PieceType.MOSQUITTO, PieceColour.BLACK): Texture.TextureType.BLACK_MOSQUITTO,
+        (PieceType.LADYBUG, PieceColour.BLACK): Texture.TextureType.BLACK_LADYBUG,
+        (PieceType.PILLBUG, PieceColour.BLACK): Texture.TextureType.BLACK_PILLBUG,
+        (PieceType.QUEEN, PieceColour.WHITE): Texture.TextureType.WHITE_QUEEN,
+        (PieceType.ANT, PieceColour.WHITE): Texture.TextureType.WHITE_ANT,
+        (PieceType.SPIDER, PieceColour.WHITE): Texture.TextureType.WHITE_SPIDER,
+        (PieceType.GRASSHOPPER, PieceColour.WHITE): Texture.TextureType.WHITE_GRASSHOPPER,
+        (PieceType.BEETLE, PieceColour.WHITE): Texture.TextureType.WHITE_BEETLE,
+        (PieceType.MOSQUITTO, PieceColour.WHITE): Texture.TextureType.WHITE_MOSQUITTO,
+        (PieceType.LADYBUG, PieceColour.WHITE): Texture.TextureType.WHITE_LADYBUG,
+        (PieceType.PILLBUG, PieceColour.WHITE): Texture.TextureType.WHITE_PILLBUG,
+    }
 
     def __init__(self, piece_type, piece_color):
         self.type = piece_type
         self.color = piece_color
         self.coord = None
-        if self.type == Piece.PieceType.QUEEN and self.color == Piece.PieceColour.BLACK:
-            self.texture = Texture.TextureType.BLACK_QUEEN
-        if self.type == Piece.PieceType.ANT and self.color == Piece.PieceColour.BLACK:
-            self.texture = Texture.TextureType.BLACK_ANT
-        if self.type == Piece.PieceType.BEETLE and self.color == Piece.PieceColour.BLACK:
-            self.texture = Texture.TextureType.BLACK_BEETLE
-        if self.type == Piece.PieceType.GRASSHOPPER and self.color == Piece.PieceColour.BLACK:
-            self.texture = Texture.TextureType.BLACK_GRASSHOPPER
-        if self.type == Piece.PieceType.SPIDER and self.color == Piece.PieceColour.BLACK:
-            self.texture = Texture.TextureType.BLACK_SPIDER
-        if self.type == Piece.PieceType.MOSQUITTO and self.color == Piece.PieceColour.BLACK:
-            self.texture = Texture.TextureType.BLACK_MOSQUITTO
-        if self.type == Piece.PieceType.LADYBUG and self.color == Piece.PieceColour.BLACK:
-            self.texture = Texture.TextureType.BLACK_LADYBUG
-        if self.type == Piece.PieceType.PILLBUG and self.color == Piece.PieceColour.BLACK:
-            self.texture = Texture.TextureType.BLACK_PILLBUG
-        if self.type == Piece.PieceType.QUEEN and self.color == Piece.PieceColour.WHITE:
-            self.texture = Texture.TextureType.WHITE_QUEEN
-        if self.type == Piece.PieceType.ANT and self.color == Piece.PieceColour.WHITE:
-            self.texture = Texture.TextureType.WHITE_ANT
-        if self.type == Piece.PieceType.BEETLE and self.color == Piece.PieceColour.WHITE:
-            self.texture = Texture.TextureType.WHITE_BEETLE
-        if self.type == Piece.PieceType.GRASSHOPPER and self.color == Piece.PieceColour.WHITE:
-            self.texture = Texture.TextureType.WHITE_GRASSHOPPER
-        if self.type == Piece.PieceType.SPIDER and self.color == Piece.PieceColour.WHITE:
-            self.texture = Texture.TextureType.WHITE_SPIDER
-        if self.type == Piece.PieceType.MOSQUITTO and self.color == Piece.PieceColour.WHITE:
-            self.texture = Texture.TextureType.WHITE_MOSQUITTO
-        if self.type == Piece.PieceType.LADYBUG and self.color == Piece.PieceColour.WHITE:
-            self.texture = Texture.TextureType.WHITE_LADYBUG
-        if self.type == Piece.PieceType.PILLBUG and self.color == Piece.PieceColour.WHITE:
-            self.texture = Texture.TextureType.WHITE_PILLBUG
+        self.texture = self.TEXTURE_MAP[(self.type, self.color)]
 
     def __repr__(self):
         return f"{self.color} {self.type}"
